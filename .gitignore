@@ -58,3 +58,4 @@ prisma/migrations/
 build/
 dist/
 frontend/
+docs/
