@@ -1,0 +1,554 @@
+{
+  "info": {
+    "name": "Student Attendance System API",
+    "description": "Complete API collection for Student Management & Biometric Attendance System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"password\": \"Test123!\",\n  \"role\": \"STUDENT\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('accessToken', response.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', response.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"Admin123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('accessToken', response.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users?role=STUDENT&page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"],
+              "query": [
+                {
+                  "key": "role",
+                  "value": "STUDENT"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "profile"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Classes",
+      "item": [
+        {
+          "name": "Get All Classes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/classes",
+              "host": ["{{baseUrl}}"],
+              "path": ["classes"]
+            }
+          }
+        },
+        {
+          "name": "Create Class",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"New Class\",\n  \"description\": \"Class description\",\n  \"teacherId\": \"TEACHER_ID_HERE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/classes",
+              "host": ["{{baseUrl}}"],
+              "path": ["classes"]
+            }
+          }
+        },
+        {
+          "name": "Get Class by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/classes/CLASS_ID_HERE",
+              "host": ["{{baseUrl}}"],
+              "path": ["classes", "CLASS_ID_HERE"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sessions",
+      "item": [
+        {
+          "name": "Start Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"classId\": \"CLASS_ID_HERE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sessions/start",
+              "host": ["{{baseUrl}}"],
+              "path": ["sessions", "start"]
+            }
+          }
+        },
+        {
+          "name": "Stop Session",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sessions/SESSION_ID_HERE/stop",
+              "host": ["{{baseUrl}}"],
+              "path": ["sessions", "SESSION_ID_HERE", "stop"]
+            }
+          }
+        },
+        {
+          "name": "Get Session Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sessions/SESSION_ID_HERE",
+              "host": ["{{baseUrl}}"],
+              "path": ["sessions", "SESSION_ID_HERE"]
+            }
+          }
+        },
+        {
+          "name": "Get Active Session for Class",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sessions/class/CLASS_ID_HERE/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["sessions", "class", "CLASS_ID_HERE", "active"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Attendance",
+      "item": [
+        {
+          "name": "Mark Attendance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"STUDENT_ID_HERE\",\n  \"sessionId\": \"SESSION_ID_HERE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/attendance/mark",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance", "mark"]
+            }
+          }
+        },
+        {
+          "name": "Get Attendance History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/history/STUDENT_ID_HERE?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance", "history", "STUDENT_ID_HERE"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Session Attendance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/session/SESSION_ID_HERE",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance", "session", "SESSION_ID_HERE"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        {
+          "name": "Get Analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/analytics?period=daily&startDate=2024-01-01&endDate=2024-12-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "analytics"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "daily"
+                },
+                {
+                  "key": "startDate",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2024-12-31"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Export CSV",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/export/csv?startDate=2024-01-01&endDate=2024-12-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "export", "csv"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2024-12-31"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Development",
+      "item": [
+        {
+          "name": "Simulate Fingerprint Enrollment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"STUDENT_ID_HERE\",\n  \"action\": \"enroll\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/dev/fingerprint-simulate",
+              "host": ["{{baseUrl}}"],
+              "path": ["dev", "fingerprint-simulate"]
+            }
+          }
+        },
+        {
+          "name": "Simulate Fingerprint Verification",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"STUDENT_ID_HERE\",\n  \"action\": \"verify\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/dev/fingerprint-simulate",
+              "host": ["{{baseUrl}}"],
+              "path": ["dev", "fingerprint-simulate"]
+            }
+          }
+        },
+        {
+          "name": "Get Dev Status",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/dev/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["dev", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths: [ 'backend/**' ]
+  pull_request:
+    branches: [ main ]
+    paths: [ 'backend/**' ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        env:
+          MONGO_INITDB_ROOT_USERNAME: admin
+          MONGO_INITDB_ROOT_PASSWORD: password123
+          MONGO_INITDB_DATABASE: student_attendance_test
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+
+    - name: Install dependencies
+      working-directory: ./backend
+      run: npm ci
+
+    - name: Generate Prisma client
+      working-directory: ./backend
+      run: npx prisma generate
+      env:
+        DATABASE_URL: mongodb://admin:password123@localhost:27017/student_attendance_test?authSource=admin
+
+    - name: Run linting
+      working-directory: ./backend
+      run: npm run lint || echo "Linting not configured yet"
+
+    - name: Run tests
+      working-directory: ./backend
+      run: npm test
+      env:
+        DATABASE_URL: mongodb://admin:password123@localhost:27017/student_attendance_test?authSource=admin
+        JWT_SECRET: test-jwt-secret-key
+        JWT_REFRESH_SECRET: test-refresh-secret-key
+        ENCRYPTION_KEY: test-encryption-key-32-characters
+        NODE_ENV: test
+        DEV_MODE: true
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      if: success()
+      with:
+        directory: ./backend/coverage

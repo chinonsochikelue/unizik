@@ -1,0 +1,131 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String   @unique
+  name      String
+  password  String
+  role      Role     @default(STUDENT)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  refreshTokens RefreshToken[]
+  fingerprint   Fingerprint?
+
+  // Teacher relations
+  teachingClasses Class[]     @relation("TeacherClasses")
+  sessions        Session[]   @relation("TeacherSessions")
+
+  // Student relations
+  enrolledClasses Class[]     @relation("StudentClasses", fields: [classIds], references: [id])
+  classIds        String[]    @db.ObjectId
+  attendance      Attendance[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  token     String   @unique
+  userId    String   @db.ObjectId
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model Class {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String?
+  teacherId   String   @db.ObjectId
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  teacher  User        @relation("TeacherClasses", fields: [teacherId], references: [id])
+  students User[]      @relation("StudentClasses", fields: [studentIds], references: [id])
+  studentIds String[]  @db.ObjectId
+  sessions Session[]
+
+  @@map("classes")
+}
+
+model Session {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  classId   String    @db.ObjectId
+  teacherId String    @db.ObjectId
+  code      String    @unique
+  startTime DateTime
+  endTime   DateTime?
+  expiresAt DateTime
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+
+  // Relations
+  class      Class        @relation(fields: [classId], references: [id])
+  teacher    User         @relation("TeacherSessions", fields: [teacherId], references: [id])
+  attendance Attendance[]
+
+  @@map("sessions")
+}
+
+model Attendance {
+  id        String          @id @default(auto()) @map("_id") @db.ObjectId
+  studentId String          @db.ObjectId
+  sessionId String          @db.ObjectId
+  status    AttendanceStatus @default(PRESENT)
+  markedAt  DateTime        @default(now())
+  notes     String?
+
+  // Relations
+  student User    @relation(fields: [studentId], references: [id])
+  session Session @relation(fields: [sessionId], references: [id])
+
+  // Ensure one attendance record per student per session
+  @@unique([studentId, sessionId])
+  @@map("attendance")
+}
+
+model Fingerprint {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String   @unique @db.ObjectId
+  templateData String   // Base64 encoded fingerprint template
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("fingerprints")
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
