@@ -5,7 +5,7 @@ const registerSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string()
     .min(8)
-    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$.,!%*?&])[A-Za-z\d@$.,!%*?&]/)
     .required()
     .messages({
       "string.pattern.base":
@@ -36,7 +36,34 @@ const startSessionSchema = Joi.object({
 const markAttendanceSchema = Joi.object({
   studentId: Joi.string().required(),
   sessionId: Joi.string().required(),
+  biometricToken: Joi.string().required(),
 })
+
+const updateProfileSchema = Joi.object({
+  name: Joi.string().min(2).max(100).optional(),
+  email: Joi.string().email().optional(),
+  password: Joi.string()
+    .min(8)
+    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+    .optional()
+    .messages({
+      "string.pattern.base":
+        "Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character",
+    }),
+  currentPassword: Joi.string()
+    .when("password", {
+      is: Joi.exist(),
+      then: Joi.required(),
+      otherwise: Joi.optional(),
+    })
+    .messages({
+      "any.required": "Current password is required when updating password",
+    }),
+})
+  .min(1)
+  .messages({
+    "object.min": "At least one field must be provided for update",
+  })
 
 const validateRequest = (schema) => {
   return (req, res, next) => {
@@ -58,5 +85,6 @@ module.exports = {
   createClassSchema,
   startSessionSchema,
   markAttendanceSchema,
+  updateProfileSchema, // Exported new schema
   validateRequest,
 }

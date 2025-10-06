@@ -179,7 +179,7 @@ async function getClassDistribution() {
     },
   })
 
-  const labels = classes.map((cls) => cls.code)
+  const labels = classes.map((cls) => cls.name)
   const data = classes.map((cls) => cls.students.length)
 
   return { labels, data }

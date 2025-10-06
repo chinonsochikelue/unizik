@@ -81,6 +81,95 @@ router.post(
   },
 )
 
+// Get active sessions (accessible by students in their enrolled classes)
+router.get("/active", authenticateJWT, async (req, res) => {
+  try {
+    let activeSessions = []
+
+    if (req.user.role === "STUDENT") {
+      // Get active sessions for classes the student is enrolled in
+      activeSessions = await prisma.session.findMany({
+        where: {
+          isActive: true,
+          expiresAt: {
+            gt: new Date(),
+          },
+          class: {
+            studentIds: {
+              has: req.user.id,
+            },
+          },
+        },
+        include: {
+          class: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          teacher: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: { startTime: "desc" },
+      })
+    } else if (req.user.role === "TEACHER") {
+      // Get active sessions for teacher's classes
+      activeSessions = await prisma.session.findMany({
+        where: {
+          teacherId: req.user.id,
+          isActive: true,
+          expiresAt: {
+            gt: new Date(),
+          },
+        },
+        include: {
+          class: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: { startTime: "desc" },
+      })
+    } else {
+      // Admin can see all active sessions
+      activeSessions = await prisma.session.findMany({
+        where: {
+          isActive: true,
+          expiresAt: {
+            gt: new Date(),
+          },
+        },
+        include: {
+          class: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          teacher: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: { startTime: "desc" },
+      })
+    }
+
+    res.json(activeSessions) // Return array directly for mobile app compatibility
+  } catch (error) {
+    console.error("Get active sessions error:", error)
+    res.status(500).json({ error: "Failed to fetch active sessions" })
+  }
+})
+
 // Get all classes for the logged-in teacher
 router.get("/teacher/classes", authenticateJWT, authorizeRole("TEACHER"), async (req, res) => {
   try {
@@ -251,6 +340,101 @@ router.get("/class/:classId/active", authenticateJWT, async (req, res) => {
   } catch (error) {
     console.error("Get active session error:", error)
     res.status(500).json({ error: "Failed to fetch active session" })
+  }
+})
+
+// Join session by code (Student only)
+router.post("/join", authenticateJWT, authorizeRole("STUDENT"), async (req, res) => {
+  try {
+    const { code, sessionCode } = req.body
+    const studentId = req.user.id
+    
+    // Accept either 'code' or 'sessionCode' field
+    const sessionCodeValue = code || sessionCode
+
+    if (!sessionCodeValue) {
+      return res.status(400).json({ error: "Session code is required" })
+    }
+
+    // Find active session with this code
+    const session = await prisma.session.findFirst({
+      where: {
+        code: sessionCodeValue.toUpperCase(),
+        isActive: true,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+      include: {
+        class: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+          },
+        },
+      },
+    })
+
+    if (!session) {
+      return res.status(404).json({ 
+        error: "Invalid or expired session code",
+        code: "SESSION_NOT_FOUND"
+      })
+    }
+
+    // Check if student is already enrolled in this class
+    const classEnrollment = await prisma.class.findFirst({
+      where: {
+        id: session.classId,
+        studentIds: {
+          has: studentId,
+        },
+      },
+    })
+
+    if (!classEnrollment) {
+      // Auto-enroll student in the class
+      await prisma.class.update({
+        where: { id: session.classId },
+        data: {
+          studentIds: {
+            push: studentId,
+          },
+        },
+      })
+    }
+
+    // Check if attendance already marked
+    const existingAttendance = await prisma.attendance.findFirst({
+      where: {
+        studentId,
+        sessionId: session.id,
+      },
+    })
+
+    if (existingAttendance) {
+      return res.status(400).json({ 
+        error: "You have already joined this session",
+        code: "ALREADY_JOINED",
+        attendance: existingAttendance
+      })
+    }
+
+    res.json({
+      success: true,
+      message: "Successfully joined session",
+      session: {
+        id: session.id,
+        code: session.code,
+        class: session.class,
+        startTime: session.startTime,
+        expiresAt: session.expiresAt,
+      },
+    })
+  } catch (error) {
+    console.error("Join session error:", error)
+    res.status(500).json({ error: "Failed to join session" })
   }
 })
 

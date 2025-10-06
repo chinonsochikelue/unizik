@@ -67,6 +67,16 @@ export default function StudentTabLayout() {
           ),
         }}
       />
+
+      <Tabs.Screen
+        name="ClassEnrollment"
+        options={{
+          title: 'Classes',
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons size={28} name="book-multiple" color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

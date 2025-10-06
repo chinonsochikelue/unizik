@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, RefreshControl } from "react-native"
-import { LineChart, BarChart, PieChart } from "react-native-chart-kit"
+import { LineChart, BarChart, PieChart } from "react-native-gifted-charts"
 import { Ionicons } from "@expo/vector-icons"
 import { apiService } from "@/services/api"
 
@@ -20,8 +20,8 @@ const AdminDashboard = ({ navigation }) => {
   const loadDashboardData = async () => {
     try {
       const response = await apiService.get("/reports/dashboard")
-      if (response.success) {
-        setDashboardData(response.data)
+      if (response.data?.success) {
+        setDashboardData(response.data.data)
       }
     } catch (error) {
       console.error("Error loading dashboard data:", error)
@@ -56,27 +56,24 @@ const AdminDashboard = ({ navigation }) => {
     )
   }
 
-  const attendanceData = {
-    labels: dashboardData?.attendanceTrend?.labels || [],
-    datasets: [
-      {
-        data: dashboardData?.attendanceTrend?.data || [],
-        color: (opacity = 1) => `rgba(34, 197, 94, ${opacity})`,
-        strokeWidth: 2,
-      },
-    ],
-  }
+  const attendanceData = (dashboardData?.attendanceTrend?.data || []).map((value, index) => ({
+    value: value,
+    label: dashboardData?.attendanceTrend?.labels?.[index] || "",
+  }))
 
-  const classDistribution = {
-    labels: dashboardData?.classDistribution?.labels || [],
-    datasets: [
-      {
-        data: dashboardData?.classDistribution?.data || [],
-      },
-    ],
-  }
+  const classDistributionData = (dashboardData?.classDistribution?.data || []).map((value, index) => ({
+    value: value,
+    label: dashboardData?.classDistribution?.labels?.[index] || "",
+    frontColor: "#3b82f6",
+  }))
 
-  const roleDistribution = dashboardData?.roleDistribution || []
+  const roleDistributionData = (dashboardData?.roleDistribution || []).map((item, index) => ({
+    value: item.count,
+    color: item.color,
+    text: `${item.name}\n${item.count}`,
+  }))
+
+  const hasValidData = (data) => data && Array.isArray(data) && data.length > 0
 
   return (
     <ScrollView
@@ -102,6 +99,13 @@ const AdminDashboard = ({ navigation }) => {
           onPress={() => navigation.navigate("UserManagement", { role: "TEACHER" })}
         />
         <StatCard
+          title="Total Admins"
+          value={dashboardData?.totalAdmins || 0}
+          icon="shield"
+          color="#8b5cf6"
+          onPress={() => navigation.navigate("UserManagement", { role: "ADMIN" })}
+        />
+        <StatCard
           title="Active Classes"
           value={dashboardData?.totalClasses || 0}
           icon="library"
@@ -120,68 +124,84 @@ const AdminDashboard = ({ navigation }) => {
       {/* Attendance Trend Chart */}
       <View style={styles.chartContainer}>
         <Text style={styles.chartTitle}>Attendance Trend (Last 7 Days)</Text>
-        <LineChart
-          data={attendanceData}
-          width={width - 40}
-          height={220}
-          chartConfig={{
-            backgroundColor: "#ffffff",
-            backgroundGradientFrom: "#ffffff",
-            backgroundGradientTo: "#ffffff",
-            decimalPlaces: 0,
-            color: (opacity = 1) => `rgba(34, 197, 94, ${opacity})`,
-            labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-            style: {
-              borderRadius: 16,
-            },
-            propsForDots: {
-              r: "6",
-              strokeWidth: "2",
-              stroke: "#22c55e",
-            },
-          }}
-          bezier
-          style={styles.chart}
-        />
+        {hasValidData(attendanceData) ? (
+          <LineChart
+            data={attendanceData}
+            width={width - 80}
+            height={220}
+            color="#22c55e"
+            thickness={3}
+            curved
+            dataPointsColor="#22c55e"
+            dataPointsRadius={6}
+            spacing={50}
+            backgroundColor="#ffffff"
+            hideRules
+            xAxisColor="#e5e7eb"
+            yAxisColor="#e5e7eb"
+            yAxisTextStyle={{ color: "#6b7280" }}
+            xAxisLabelTextStyle={{ color: "#6b7280", fontSize: 10 }}
+            noOfSections={5}
+            maxValue={100}
+          />
+        ) : (
+          <View style={styles.emptyState}>
+            <Ionicons name="bar-chart-outline" size={48} color="#d1d5db" />
+            <Text style={styles.emptyStateText}>No attendance data available</Text>
+          </View>
+        )}
       </View>
 
       {/* Class Distribution Chart */}
       <View style={styles.chartContainer}>
         <Text style={styles.chartTitle}>Students per Class</Text>
-        <BarChart
-          data={classDistribution}
-          width={width - 40}
-          height={220}
-          chartConfig={{
-            backgroundColor: "#ffffff",
-            backgroundGradientFrom: "#ffffff",
-            backgroundGradientTo: "#ffffff",
-            decimalPlaces: 0,
-            color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
-            labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-            style: {
-              borderRadius: 16,
-            },
-          }}
-          style={styles.chart}
-        />
+        {hasValidData(classDistributionData) ? (
+          <BarChart
+            data={classDistributionData}
+            width={width - 80}
+            height={220}
+            barWidth={30}
+            spacing={20}
+            roundedTop
+            roundedBottom
+            hideRules
+            xAxisThickness={1}
+            yAxisThickness={1}
+            xAxisColor="#e5e7eb"
+            yAxisColor="#e5e7eb"
+            yAxisTextStyle={{ color: "#6b7280" }}
+            xAxisLabelTextStyle={{ color: "#6b7280", fontSize: 10, textAlign: "center" }}
+            noOfSections={5}
+          />
+        ) : (
+          <View style={styles.emptyState}>
+            <Ionicons name="bar-chart-outline" size={48} color="#d1d5db" />
+            <Text style={styles.emptyStateText}>No class distribution data available</Text>
+          </View>
+        )}
       </View>
 
       {/* Role Distribution Pie Chart */}
       <View style={styles.chartContainer}>
         <Text style={styles.chartTitle}>User Role Distribution</Text>
-        <PieChart
-          data={roleDistribution}
-          width={width - 40}
-          height={220}
-          chartConfig={{
-            color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-          }}
-          accessor="count"
-          backgroundColor="transparent"
-          paddingLeft="15"
-          style={styles.chart}
-        />
+        {hasValidData(roleDistributionData) ? (
+          <View style={styles.pieChartWrapper}>
+            <PieChart
+              data={roleDistributionData}
+              radius={100}
+              showText
+              textColor="#ffffff"
+              textSize={12}
+              focusOnPress
+              showValuesAsLabels
+            />
+          </View>
+        ) : (
+          <View style={styles.emptyState}>
+            <Ionicons name="pie-chart-outline" size={48} color="#d1d5db" />
+            <Text style={styles.emptyStateText}>No role distribution data available</Text>
+          </View>
+        )}
       </View>
 
       {/* Quick Actions */}
@@ -283,6 +303,22 @@ const styles = StyleSheet.create({
   },
   chart: {
     borderRadius: 16,
+  },
+  pieChartWrapper: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 20,
+  },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+  },
+  emptyStateText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: "#9ca3af",
+    textAlign: "center",
   },
   actionsContainer: {
     margin: 20,

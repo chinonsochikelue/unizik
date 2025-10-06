@@ -1,7 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from "react-native"
+import { useState, useEffect, useRef } from "react"
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
+  TouchableOpacity, 
+  RefreshControl,
+  Animated,
+  Easing
+} from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { useAuth } from "@/context/AuthContext"
 import { apiService } from "@/services/api"
@@ -9,7 +18,7 @@ import { useRouter } from "expo-router"
 
 export default function TeacherDashboard() {
   const { user } = useAuth()
-  const navigation = useRouter();
+  const navigation = useRouter()
   const [classes, setClasses] = useState([])
   const [activeSessions, setActiveSessions] = useState([])
   const [stats, setStats] = useState({
@@ -20,36 +29,98 @@ export default function TeacherDashboard() {
   })
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  
+  // Animation values
+  const spinValue = useRef(new Animated.Value(0)).current
+  const pulseValue = useRef(new Animated.Value(1)).current
+  const fadeValue = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
     loadDashboardData()
+    startLoadingAnimations()
   }, [])
+  
+  const startLoadingAnimations = () => {
+    // Spinning animation
+    Animated.loop(
+      Animated.timing(spinValue, {
+        toValue: 1,
+        duration: 2000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    ).start()
+    
+    // Pulsing animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseValue, {
+          toValue: 1.1,
+          duration: 1000,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseValue, {
+          toValue: 1,
+          duration: 1000,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start()
+    
+    // Fade in animation
+    Animated.timing(fadeValue, {
+      toValue: 1,
+      duration: 800,
+      useNativeDriver: true,
+    }).start()
+  }
 
   const loadDashboardData = async () => {
     try {
-      const [classesResponse, sessionsResponse] = await Promise.all([
+      const [classesResponse, dashboardResponse] = await Promise.all([
         apiService.get("/sessions/teacher/classes"),
-        apiService.get("/sessions/teacher/sessions"),
+        apiService.get("/reports/teacher/dashboard"),
       ])
 
       const teacherClasses = classesResponse.data.classes || []
       setClasses(teacherClasses)
 
-      const teacherSessions = sessionsResponse.data.sessions || []
-      setActiveSessions(teacherSessions.filter((s) => s.isActive))
-
-      // Calculate stats
-      const totalStudents = teacherClasses.reduce((sum, cls) => sum + (cls._count?.students || 0), 0)
-      const activeSessionsCount = teacherSessions.filter((s) => s.isActive).length
-
+      // Get dashboard stats from new endpoint
+      const dashboardData = dashboardResponse.data
       setStats({
-        totalClasses: teacherClasses.length,
-        totalStudents,
-        activeSessions: activeSessionsCount,
-        todayAttendance: 0, // You can update this to calculate today's attendance if needed
+        totalClasses: dashboardData.stats.totalClasses,
+        totalStudents: dashboardData.stats.totalStudents,
+        activeSessions: dashboardData.stats.activeSessions,
+        todayAttendance: dashboardData.stats.todayAttendance,
       })
+
+      // Set active sessions from classes with active sessions
+      const activeClasses = teacherClasses.filter((cls) => 
+        dashboardData.classes.find((c) => c.id === cls.id && c.hasActiveSession)
+      )
+      setActiveSessions(activeClasses)
     } catch (error) {
       console.error("Error loading dashboard data:", error)
+      
+      // Fallback to old method if new endpoint fails
+      try {
+        const classesResponse = await apiService.get("/sessions/teacher/classes")
+        const teacherClasses = classesResponse.data.classes || []
+        setClasses(teacherClasses)
+        
+        const totalStudents = teacherClasses.reduce((sum, cls) => sum + (cls._count?.students || 0), 0)
+        
+        setStats({
+          totalClasses: teacherClasses.length,
+          totalStudents,
+          activeSessions: 0,
+          todayAttendance: 0,
+        })
+      } catch (fallbackError) {
+        console.error("Fallback error:", fallbackError)
+      }
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -62,9 +133,41 @@ export default function TeacherDashboard() {
   }
 
   if (loading) {
+    const spin = spinValue.interpolate({
+      inputRange: [0, 1],
+      outputRange: ['0deg', '360deg']
+    })
+    
     return (
       <View style={styles.loadingContainer}>
-        <Text>Loading...</Text>
+        <Animated.View style={[
+          styles.loadingContent,
+          { opacity: fadeValue }
+        ]}>
+          {/* Animated Logo */}
+          <View style={styles.loadingIconContainer}>
+            <Animated.View style={[
+              styles.loadingIcon,
+              { transform: [{ scale: pulseValue }] }
+            ]}>
+              <Ionicons name="school" size={40} color="#2563eb" />
+            </Animated.View>
+            <Animated.View style={[
+              styles.loadingRing,
+              { transform: [{ rotate: spin }] }
+            ]} />
+          </View>
+          
+          <Text style={styles.loadingTitle}>Loading Dashboard</Text>
+          <Text style={styles.loadingSubtitle}>Preparing your classes...</Text>
+          
+          {/* Skeleton Cards */}
+          <View style={styles.skeletonStatsRow}>
+            <View style={styles.skeletonStatCard} />
+            <View style={styles.skeletonStatCard} />
+            <View style={styles.skeletonStatCard} />
+          </View>
+        </Animated.View>
       </View>
     )
   }
@@ -143,14 +246,19 @@ export default function TeacherDashboard() {
             <TouchableOpacity
               key={classItem.id}
               style={styles.classCard}
-              onPress={() => navigation.push("SessionScreen", { classId: classItem.id })}
+              onPress={() => navigation.push({
+                pathname: "/SessionScreen",
+                params: {
+                  // sessionId: response.data.session.id,
+                  classId: classItem.id,
+                }
+              })}
             >
               <View style={styles.classInfo}>
                 <Text style={styles.className}>{classItem.name}</Text>
                 <Text style={styles.classDescription}>{classItem.description}</Text>
                 <Text style={styles.classStudents}>{classItem._count?.students || 0} students enrolled</Text>
               </View>
-              <p>{}</p>
               <Ionicons name="chevron-forward" size={20} color="#64748b" />
             </TouchableOpacity>
           ))
@@ -172,14 +280,81 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
+    backgroundColor: "#f8fafc",
     justifyContent: "center",
     alignItems: "center",
+    padding: 20,
+  },
+  loadingContent: {
+    alignItems: "center",
+    width: "100%",
+  },
+  loadingIconContainer: {
+    position: "relative",
+    marginBottom: 32,
+  },
+  loadingIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "white",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#2563eb",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 2,
+  },
+  loadingRing: {
+    position: "absolute",
+    top: -10,
+    left: -10,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    borderColor: "#e0e7ff",
+    borderTopColor: "#2563eb",
+    zIndex: 1,
+  },
+  loadingTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#1e293b",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  loadingSubtitle: {
+    fontSize: 16,
+    color: "#64748b",
+    textAlign: "center",
+    marginBottom: 32,
+  },
+  skeletonStatsRow: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+    paddingHorizontal: 16,
+  },
+  skeletonStatCard: {
+    flex: 1,
+    height: 80,
+    backgroundColor: "white",
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   header: {
     backgroundColor: "white",
     padding: 24,
     borderBottomWidth: 1,
     borderBottomColor: "#e2e8f0",
+    marginTop: 12,
   },
   greeting: {
     fontSize: 16,

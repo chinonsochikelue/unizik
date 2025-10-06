@@ -13,7 +13,7 @@ import {
   RefreshControl,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
-import { api } from "@/services/api"
+import { apiService } from "@/services/api"
 
 const ClassManagement = ({ navigation }) => {
   const [classes, setClasses] = useState([])
@@ -39,7 +39,7 @@ const ClassManagement = ({ navigation }) => {
 
   const loadClasses = async () => {
     try {
-      const response = await api.get("/classes")
+      const response = await apiService.get("/classes")
       if (response.success) {
         setClasses(response.data)
       }
@@ -95,13 +95,13 @@ const ClassManagement = ({ navigation }) => {
   const handleSave = async () => {
     try {
       if (editingClass) {
-        const response = await api.put(`/classes/${editingClass.id}`, formData)
+        const response = await apiService.put(`/classes/${editingClass.id}`, formData)
         if (response.success) {
           Alert.alert("Success", "Class updated successfully")
           loadClasses()
         }
       } else {
-        const response = await api.post("/classes", formData)
+        const response = await apiService.post("/classes", formData)
         if (response.success) {
           Alert.alert("Success", "Class created successfully")
           loadClasses()
@@ -122,7 +122,7 @@ const ClassManagement = ({ navigation }) => {
         style: "destructive",
         onPress: async () => {
           try {
-            const response = await api.delete(`/classes/${cls.id}`)
+            const response = await apiService.delete(`/classes/${cls.id}`)
             if (response.success) {
               Alert.alert("Success", "Class deleted successfully")
               loadClasses()

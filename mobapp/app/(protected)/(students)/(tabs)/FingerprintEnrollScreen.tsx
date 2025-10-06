@@ -35,6 +35,7 @@ export default function FingerprintEnrollScreen() {
 
   useEffect(() => {
     checkBiometricSupport()
+    checkEnrollmentStatus()
     
     // Entrance animations
     Animated.parallel([
@@ -71,6 +72,19 @@ export default function FingerprintEnrollScreen() {
   const checkBiometricSupport = async () => {
     const support = await biometricService.checkBiometricSupport()
     setBiometricSupport(support)
+  }
+
+  const checkEnrollmentStatus = async () => {
+    try {
+      const status = await biometricService.checkEnrollmentStatus(user.id)
+      if (status.success && status.enrolled) {
+        setEnrolled(true)
+        setCurrentStep(2)
+        progressAnim.setValue(1)
+      }
+    } catch (error) {
+      console.error("Check enrollment status error:", error)
+    }
   }
 
   const handleEnrollment = async () => {

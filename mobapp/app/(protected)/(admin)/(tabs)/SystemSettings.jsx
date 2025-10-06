@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Switch, Alert } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
-import { api } from "@/services/api"
+import { apiService } from "@/services/api"
 
 const SystemSettings = () => {
   const [settings, setSettings] = useState({
@@ -25,7 +25,7 @@ const SystemSettings = () => {
 
   const loadSettings = async () => {
     try {
-      const response = await api.get("/admin/settings")
+      const response = await apiService.get("/admin/settings")
       if (response.success) {
         setSettings(response.data)
       }
@@ -42,7 +42,7 @@ const SystemSettings = () => {
   const saveSettings = async () => {
     setLoading(true)
     try {
-      const response = await api.put("/admin/settings", settings)
+      const response = await apiService.put("/admin/settings", settings)
       if (response.success) {
         Alert.alert("Success", "Settings saved successfully")
         setHasChanges(false)

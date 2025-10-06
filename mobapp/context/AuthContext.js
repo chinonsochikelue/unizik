@@ -31,6 +31,8 @@ export const AuthProvider = ({ children }) => {
         setAccessToken(token)
         setUser(parsedUser)
         apiService.setAuthToken(token)
+        // Also store with 'token' key for backward compatibility
+        await AsyncStorage.setItem("token", token)
       }
     } catch (error) {
       console.error("Error checking auth state:", error)
@@ -50,6 +52,7 @@ export const AuthProvider = ({ children }) => {
 
       // Store tokens and user data
       await AsyncStorage.setItem("accessToken", accessToken)
+      await AsyncStorage.setItem("token", accessToken) // For backward compatibility
       await AsyncStorage.setItem("refreshToken", refreshToken)
       await AsyncStorage.setItem("userData", JSON.stringify(user))
 
@@ -92,7 +95,7 @@ export const AuthProvider = ({ children }) => {
       console.error("Logout error:", error)
     } finally {
       // Clear local storage regardless of API call success
-      await AsyncStorage.multiRemove(["accessToken", "refreshToken", "userData"])
+      await AsyncStorage.multiRemove(["accessToken", "token", "refreshToken", "userData"])
       setAccessToken(null)
       setUser(null)
       apiService.setAuthToken(null)
@@ -114,6 +117,7 @@ export const AuthProvider = ({ children }) => {
       const { accessToken } = response.data
 
       await AsyncStorage.setItem("accessToken", accessToken)
+      await AsyncStorage.setItem("token", accessToken) // For backward compatibility
       setAccessToken(accessToken)
       apiService.setAuthToken(accessToken)
 
@@ -125,6 +129,21 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  const updateUser = async (updatedUserData) => {
+    try {
+      // Update user state
+      setUser(updatedUserData)
+      
+      // Update stored user data
+      await AsyncStorage.setItem("userData", JSON.stringify(updatedUserData))
+      
+      return { success: true }
+    } catch (error) {
+      console.error("Error updating user:", error)
+      return { success: false, error: "Failed to update user data" }
+    }
+  }
+
   const value = {
     user,
     loading,
@@ -133,6 +152,7 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     refreshToken,
+    updateUser,
     isAuthenticated: !!user,
   }
 

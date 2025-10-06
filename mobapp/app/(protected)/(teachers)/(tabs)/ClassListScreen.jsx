@@ -9,7 +9,7 @@ import { useRouter } from "expo-router"
 
 export default function ClassListScreen() {
   const { user } = useAuth()
-    const navigation = useRouter();
+  const router = useRouter()
   const [classes, setClasses] = useState([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -20,11 +20,27 @@ export default function ClassListScreen() {
 
   const loadClasses = async () => {
     try {
-      const response = await apiService.get("/classes")
-      setClasses(response.data.classes || [])
+      const [classesResponse, sessionsResponse] = await Promise.all([
+        apiService.get("/sessions/teacher/classes"),
+        apiService.get("/sessions/teacher/sessions")
+      ])
+      
+      const teacherClasses = classesResponse.data.classes || []
+      const teacherSessions = sessionsResponse.data.sessions || []
+      
+      // Add active session info to classes
+      const classesWithSessions = teacherClasses.map(cls => {
+        const activeSession = teacherSessions.find(s => s.isActive && s.class?.id === cls.id)
+        return {
+          ...cls,
+          activeSession
+        }
+      })
+      
+      setClasses(classesWithSessions)
     } catch (error) {
       console.error("Error loading classes:", error)
-      Alert.alert("Error", "Failed to load classes")
+      Alert.alert("Error", "Failed to load classes. Please check your connection and try again.")
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -47,9 +63,12 @@ export default function ClassListScreen() {
           {
             text: "OK",
             onPress: () =>
-              navigation.push("SessionScreen", {
-                sessionId: response.data.session.id,
-                classId,
+              router.push({
+                pathname: "/SessionScreen",
+                params: {
+                  sessionId: response.data.session.id,
+                  classId: classId,
+                }
               }),
           },
         ],
@@ -97,9 +116,12 @@ export default function ClassListScreen() {
               {classItem.activeSession ? (
                 <TouchableOpacity
                   style={styles.primaryButton}
-                  onPress={() => navigation.push("SessionScreen", {
-                    sessionId: classItem.activeSession.id,
-                    classId: classItem.id,
+                  onPress={() => router.push({
+                    pathname: "/SessionScreen",
+                    params: {
+                      sessionId: classItem.activeSession.id,
+                      classId: classItem.id,
+                    }
                   })}
                 >
                   <Ionicons name="checkmark-circle" size={20} color="white" />
@@ -117,7 +139,10 @@ export default function ClassListScreen() {
 
               <TouchableOpacity
                 style={styles.secondaryButton}
-                onPress={() => navigation.push("SessionScreen", { classId: classItem.id })}
+                onPress={() => router.push({
+                  pathname: "/SessionScreen",
+                  params: { classId: classItem.id }
+                })}
               >
                 <Ionicons name="people" size={20} color="#2563eb" />
                 <Text style={styles.secondaryButtonText}>View Students</Text>
@@ -162,6 +187,7 @@ const styles = StyleSheet.create({
     padding: 24,
     borderBottomWidth: 1,
     borderBottomColor: "#e2e8f0",
+    marginTop: 16,
   },
   title: {
     fontSize: 24,

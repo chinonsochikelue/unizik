@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react"
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert } from "react-native"
-import { LineChart, BarChart } from "react-native-chart-kit"
+import { LineChart, BarChart } from "react-native-gifted-charts"
 import { Ionicons } from "@expo/vector-icons"
 import DateTimePicker from "@react-native-community/datetimepicker"
-import { api } from "@/services/api"
+import { apiService } from "@/services/api"
 import * as FileSystem from "expo-file-system"
 import * as Sharing from "expo-sharing"
 
@@ -19,6 +19,7 @@ const Reports = () => {
   const [showStartPicker, setShowStartPicker] = useState(false)
   const [showEndPicker, setShowEndPicker] = useState(false)
   const [selectedReport, setSelectedReport] = useState("attendance")
+  const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
     loadReportData()
@@ -26,6 +27,7 @@ const Reports = () => {
 
   const loadReportData = async () => {
     setLoading(true)
+    setRefreshing(true)
     try {
       const params = {
         startDate: startDate.toISOString().split("T")[0],
@@ -33,15 +35,16 @@ const Reports = () => {
         type: selectedReport,
       }
 
-      const response = await api.get("/reports/detailed", { params })
-      if (response.success) {
-        setReportData(response.data)
+      const response = await apiService.get("/reports/detailed", { params })
+      if (response.data?.success) {
+        setReportData(response.data.data)
       }
     } catch (error) {
       console.error("Error loading report data:", error)
       Alert.alert("Error", "Failed to load report data")
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }
 
@@ -55,18 +58,15 @@ const Reports = () => {
       }
 
       const response = await api.get("/reports/export", { params })
-      if (response.success) {
-        // Create CSV content
-        const csvContent = response.data.csvData
+      if (response.data?.success) {
+        const csvContent = response.data.data.csvData
         const fileName = `${selectedReport}_report_${startDate.toISOString().split("T")[0]}_to_${
           endDate.toISOString().split("T")[0]
         }.csv`
 
-        // Save file
         const fileUri = FileSystem.documentDirectory + fileName
         await FileSystem.writeAsStringAsync(fileUri, csvContent)
 
-        // Share file
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(fileUri)
         } else {
@@ -102,25 +102,18 @@ const Reports = () => {
     })
   }
 
-  const attendanceChartData = {
-    labels: reportData?.chartData?.labels || [],
-    datasets: [
-      {
-        data: reportData?.chartData?.attendanceRates || [],
-        color: (opacity = 1) => `rgba(34, 197, 94, ${opacity})`,
-        strokeWidth: 2,
-      },
-    ],
-  }
+  const attendanceChartData = (reportData?.chartData?.attendanceRates || []).map((value, index) => ({
+    value: value,
+    label: reportData?.chartData?.labels?.[index] || "",
+  }))
 
-  const classChartData = {
-    labels: reportData?.chartData?.classLabels || [],
-    datasets: [
-      {
-        data: reportData?.chartData?.classAttendance || [],
-      },
-    ],
-  }
+  const classChartData = (reportData?.chartData?.classAttendance || []).map((value, index) => ({
+    value: value,
+    label: reportData?.chartData?.classLabels?.[index] || "",
+    frontColor: "#3b82f6",
+  }))
+
+  const hasValidData = (data) => data && Array.isArray(data) && data.length > 0
 
   return (
     <ScrollView style={styles.container}>
@@ -207,52 +200,62 @@ const Reports = () => {
           {selectedReport === "attendance" && (
             <View style={styles.chartContainer}>
               <Text style={styles.chartTitle}>Attendance Trend</Text>
-              <LineChart
-                data={attendanceChartData}
-                width={width - 40}
-                height={220}
-                chartConfig={{
-                  backgroundColor: "#ffffff",
-                  backgroundGradientFrom: "#ffffff",
-                  backgroundGradientTo: "#ffffff",
-                  decimalPlaces: 1,
-                  color: (opacity = 1) => `rgba(34, 197, 94, ${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                  style: {
-                    borderRadius: 16,
-                  },
-                  propsForDots: {
-                    r: "6",
-                    strokeWidth: "2",
-                    stroke: "#22c55e",
-                  },
-                }}
-                bezier
-                style={styles.chart}
-              />
+              {hasValidData(attendanceChartData) ? (
+                <LineChart
+                  data={attendanceChartData}
+                  width={width - 80}
+                  height={220}
+                  color="#22c55e"
+                  thickness={3}
+                  curved
+                  dataPointsColor="#22c55e"
+                  dataPointsRadius={6}
+                  spacing={50}
+                  backgroundColor="#ffffff"
+                  hideRules
+                  xAxisColor="#e5e7eb"
+                  yAxisColor="#e5e7eb"
+                  yAxisTextStyle={{ color: "#6b7280" }}
+                  xAxisLabelTextStyle={{ color: "#6b7280", fontSize: 10 }}
+                  noOfSections={5}
+                  maxValue={100}
+                />
+              ) : (
+                <View style={styles.emptyState}>
+                  <Ionicons name="bar-chart-outline" size={48} color="#d1d5db" />
+                  <Text style={styles.emptyStateText}>No attendance data available for this period</Text>
+                </View>
+              )}
             </View>
           )}
 
           {selectedReport === "classes" && (
             <View style={styles.chartContainer}>
               <Text style={styles.chartTitle}>Class Attendance Comparison</Text>
-              <BarChart
-                data={classChartData}
-                width={width - 40}
-                height={220}
-                chartConfig={{
-                  backgroundColor: "#ffffff",
-                  backgroundGradientFrom: "#ffffff",
-                  backgroundGradientTo: "#ffffff",
-                  decimalPlaces: 0,
-                  color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                  style: {
-                    borderRadius: 16,
-                  },
-                }}
-                style={styles.chart}
-              />
+              {hasValidData(classChartData) ? (
+                <BarChart
+                  data={classChartData}
+                  width={width - 80}
+                  height={220}
+                  barWidth={30}
+                  spacing={20}
+                  roundedTop
+                  roundedBottom
+                  hideRules
+                  xAxisThickness={1}
+                  yAxisThickness={1}
+                  xAxisColor="#e5e7eb"
+                  yAxisColor="#e5e7eb"
+                  yAxisTextStyle={{ color: "#6b7280" }}
+                  xAxisLabelTextStyle={{ color: "#6b7280", fontSize: 10, textAlign: "center" }}
+                  noOfSections={5}
+                />
+              ) : (
+                <View style={styles.emptyState}>
+                  <Ionicons name="bar-chart-outline" size={48} color="#d1d5db" />
+                  <Text style={styles.emptyStateText}>No class data available for this period</Text>
+                </View>
+              )}
             </View>
           )}
         </>
@@ -485,6 +488,17 @@ const styles = StyleSheet.create({
   },
   chart: {
     borderRadius: 16,
+  },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+  },
+  emptyStateText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: "#9ca3af",
+    textAlign: "center",
   },
   tableContainer: {
     backgroundColor: "#ffffff",

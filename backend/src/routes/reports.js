@@ -5,6 +5,99 @@ const { authenticateJWT, authorizeRole } = require("../middleware/auth")
 const router = express.Router()
 const prisma = new PrismaClient()
 
+// Get teacher dashboard statistics
+router.get("/teacher/dashboard", authenticateJWT, authorizeRole("TEACHER"), async (req, res) => {
+  try {
+    const teacherId = req.user.id
+
+    // Get teacher's classes with counts
+    const classes = await prisma.class.findMany({
+      where: { teacherId },
+      include: {
+        _count: {
+          select: {
+            students: true,
+            sessions: true,
+          },
+        },
+        sessions: {
+          where: { isActive: true },
+          select: { id: true },
+        },
+      },
+    })
+
+    const totalClasses = classes.length
+    const totalStudents = classes.reduce((sum, c) => sum + c._count.students, 0)
+    const activeSessions = classes.reduce((sum, c) => sum + c.sessions.length, 0)
+
+    // Get today's attendance count
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    const todayAttendance = await prisma.attendance.count({
+      where: {
+        session: {
+          teacherId,
+          startTime: {
+            gte: today,
+            lt: tomorrow,
+          },
+        },
+      },
+    })
+
+    // Get attendance trend for last 7 days
+    const attendanceTrend = []
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date()
+      date.setDate(date.getDate() - i)
+      date.setHours(0, 0, 0, 0)
+      const nextDay = new Date(date)
+      nextDay.setDate(nextDay.getDate() + 1)
+
+      const dayAttendance = await prisma.attendance.count({
+        where: {
+          session: {
+            teacherId,
+            startTime: {
+              gte: date,
+              lt: nextDay,
+            },
+          },
+        },
+      })
+
+      attendanceTrend.push({
+        date: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        count: dayAttendance,
+      })
+    }
+
+    res.json({
+      stats: {
+        totalClasses,
+        totalStudents,
+        activeSessions,
+        todayAttendance,
+      },
+      attendanceTrend,
+      classes: classes.map((c) => ({
+        id: c.id,
+        name: c.name,
+        studentCount: c._count.students,
+        sessionCount: c._count.sessions,
+        hasActiveSession: c.sessions.length > 0,
+      })),
+    })
+  } catch (error) {
+    console.error("Teacher dashboard error:", error)
+    res.status(500).json({ error: "Failed to fetch dashboard data" })
+  }
+})
+
 // Get attendance analytics (Admin/Teacher)
 router.get("/analytics", authenticateJWT, authorizeRole("ADMIN", "TEACHER"), async (req, res) => {
   try {
@@ -176,6 +269,7 @@ router.get("/dashboard", authenticateJWT, authorizeRole("ADMIN"), async (req, re
     // Get basic counts
     const totalStudents = await prisma.user.count({ where: { role: "STUDENT" } })
     const totalTeachers = await prisma.user.count({ where: { role: "TEACHER" } })
+    const totalAdmins = await prisma.user.count({ where: { role: "ADMIN" } })
     const totalClasses = await prisma.class.count()
 
     // Get today's sessions
@@ -207,6 +301,7 @@ router.get("/dashboard", authenticateJWT, authorizeRole("ADMIN"), async (req, re
       data: {
         totalStudents,
         totalTeachers,
+        totalAdmins,
         totalClasses,
         todaySessions,
         attendanceTrend,
@@ -242,10 +337,21 @@ router.get("/detailed", authenticateJWT, authorizeRole("ADMIN", "TEACHER"), asyn
           },
         },
         include: {
-          student: true,
+          student: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
           session: {
             include: {
-              class: true,
+              class: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
             },
           },
         },
@@ -286,11 +392,100 @@ router.get("/detailed", authenticateJWT, authorizeRole("ADMIN", "TEACHER"), asyn
         rows: attendanceRecords
           .slice(0, 50)
           .map((record) => [
-            `${record.student.firstName} ${record.student.lastName}`,
+            record.student.name,
             record.session.class.name,
-            record.markedAt.toLocaleDateString(),
+            new Date(record.markedAt).toLocaleDateString(),
             record.status,
           ]),
+      }
+    } else if (type === "classes") {
+      const classes = await prisma.class.findMany({
+        include: {
+          students: true,
+          sessions: {
+            where: {
+              startTime: {
+                gte: new Date(startDate),
+                lte: new Date(endDate),
+              },
+            },
+            include: {
+              attendance: true,
+            },
+          },
+          teacher: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      })
+
+      summary = {
+        totalClasses: classes.length,
+        totalStudents: await prisma.user.count({ where: { role: "STUDENT" } }),
+        activeClasses: classes.filter((c) => c.isActive).length,
+        totalSessions: classes.reduce((sum, c) => sum + c.sessions.length, 0),
+      }
+
+      chartData = {
+        classLabels: classes.map((c) => c.name.substring(0, 10)),
+        classAttendance: classes.map((c) => {
+          const totalAttendance = c.sessions.reduce((sum, s) => sum + s.attendance.length, 0)
+          const totalPossible = c.sessions.length * c.students.length
+          return totalPossible > 0 ? Math.round((totalAttendance / totalPossible) * 100) : 0
+        }),
+      }
+
+      detailedData = {
+        headers: ["Class", "Teacher", "Students", "Sessions", "Attendance Rate"],
+        rows: classes.map((c) => {
+          const totalAttendance = c.sessions.reduce((sum, s) => sum + s.attendance.length, 0)
+          const totalPossible = c.sessions.length * c.students.length
+          const rate = totalPossible > 0 ? Math.round((totalAttendance / totalPossible) * 100) : 0
+          return [c.name, c.teacher.name, c.students.length.toString(), c.sessions.length.toString(), `${rate}%`]
+        }),
+      }
+    } else if (type === "users") {
+      const students = await prisma.user.findMany({
+        where: { role: "STUDENT" },
+        include: {
+          attendance: {
+            where: {
+              markedAt: {
+                gte: new Date(startDate),
+                lte: new Date(endDate),
+              },
+            },
+          },
+          enrolledClasses: true,
+        },
+      })
+
+      summary = {
+        totalStudents: students.length,
+        activeStudents: students.filter((s) => s.isActive).length,
+        totalClasses: await prisma.class.count(),
+        averageAttendanceRate:
+          students.length > 0
+            ? Math.round(
+                students.reduce((sum, s) => {
+                  const present = s.attendance.filter((a) => a.status === "PRESENT").length
+                  const total = s.attendance.length
+                  return sum + (total > 0 ? (present / total) * 100 : 0)
+                }, 0) / students.length,
+              )
+            : 0,
+      }
+
+      detailedData = {
+        headers: ["Student", "Email", "Classes", "Attendance", "Rate"],
+        rows: students.slice(0, 50).map((s) => {
+          const present = s.attendance.filter((a) => a.status === "PRESENT").length
+          const total = s.attendance.length
+          const rate = total > 0 ? Math.round((present / total) * 100) : 0
+          return [s.name, s.email, s.enrolledClasses.length.toString(), `${present}/${total}`, `${rate}%`]
+        }),
       }
     }
 
@@ -324,23 +519,33 @@ router.get("/export", authenticateJWT, authorizeRole("ADMIN", "TEACHER"), async 
         },
       },
       include: {
-        student: true,
+        student: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
         session: {
           include: {
-            class: true,
+            class: {
+              select: {
+                name: true,
+              },
+            },
           },
         },
       },
     })
 
     if (format === "csv") {
-      const csvHeaders = ["Student Name", "Student ID", "Class", "Date", "Time", "Status"]
+      const csvHeaders = ["Student Name", "Student Email", "Class", "Date", "Time", "Status"]
       const csvRows = attendanceRecords.map((record) => [
-        `${record.student.firstName} ${record.student.lastName}`,
-        record.student.studentId || record.student.id,
+        record.student.name,
+        record.student.email,
         record.session.class.name,
-        record.markedAt.toLocaleDateString(),
-        record.markedAt.toLocaleTimeString(),
+        new Date(record.markedAt).toLocaleDateString(),
+        new Date(record.markedAt).toLocaleTimeString(),
         record.status,
       ])
 
@@ -411,7 +616,7 @@ async function getClassDistribution() {
     },
   })
 
-  const labels = classes.map((cls) => cls.code)
+  const labels = classes.map((cls) => cls.name)
   const data = classes.map((cls) => cls.students.length)
 
   return { labels, data }

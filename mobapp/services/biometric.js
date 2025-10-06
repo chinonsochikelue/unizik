@@ -84,6 +84,13 @@ class BiometricService {
           action: "enroll",
         })
 
+        if (response.data.success) {
+          // Store enrollment in database
+          await apiService.post("/fingerprints/enroll", {
+            templateData: response.data.templateId || `template-${userId}-${Date.now()}`,
+          })
+        }
+
         return {
           success: response.data.success,
           templateId: response.data.templateId,
@@ -92,18 +99,30 @@ class BiometricService {
       }
 
       // In production, this would handle actual fingerprint enrollment
-      // For now, we'll just mark as enrolled in the database
       const biometricSupport = await this.checkBiometricSupport()
 
       if (!biometricSupport.isSupported) {
         throw new Error("Biometric enrollment not available on this device")
       }
 
-      // Simulate enrollment success
+      // Perform device biometric authentication to "enroll"
+      const authResult = await this.authenticateAsync({
+        promptMessage: "Place your finger to enroll biometric authentication",
+      })
+
+      if (!authResult.success) {
+        throw new Error(authResult.error || "Biometric enrollment failed")
+      }
+
+      // Store enrollment in database
+      const response = await apiService.post("/fingerprints/enroll", {
+        templateData: `template-${userId}-${Date.now()}`,
+      })
+
       return {
         success: true,
-        templateId: `device-${userId}`,
-        message: "Fingerprint enrolled successfully using device biometrics",
+        templateId: response.data.fingerprint.id,
+        message: response.data.message,
       }
     } catch (error) {
       console.error("Fingerprint enrollment error:", error)
@@ -127,6 +146,7 @@ class BiometricService {
           success: response.data.success,
           confidence: response.data.confidence,
           message: response.data.message,
+          token: response.data.success ? `bio-${userId}-${Date.now()}` : null,
         }
       }
 
@@ -139,12 +159,33 @@ class BiometricService {
         success: authResult.success,
         confidence: authResult.success ? 0.95 : 0,
         message: authResult.success ? "Biometric verification successful" : authResult.error,
+        token: authResult.success ? `bio-${userId}-${Date.now()}` : null,
       }
     } catch (error) {
       console.error("Fingerprint verification error:", error)
       return {
         success: false,
         confidence: 0,
+        error: error.message,
+      }
+    }
+  }
+
+  async checkEnrollmentStatus(userId) {
+    try {
+      const response = await apiService.get("/fingerprints/status")
+      return {
+        success: true,
+        enrolled: response.data.enrolled,
+        active: response.data.active,
+        enrolledAt: response.data.enrolledAt,
+      }
+    } catch (error) {
+      console.error("Check enrollment status error:", error)
+      return {
+        success: false,
+        enrolled: false,
+        active: false,
         error: error.message,
       }
     }

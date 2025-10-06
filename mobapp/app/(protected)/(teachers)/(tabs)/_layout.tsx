@@ -1,51 +1,60 @@
-// app/(protected)/(teachers)/_layout.tsx
-import { Stack, Redirect } from 'expo-router';
-import { useAuth } from '@/context/AuthContext';
-import { Tabs } from 'expo-router';
-import { Colors } from '@/constants/theme';
-import { HapticTab } from '@/components/haptic-tab';
-import { useColorScheme } from '@/hooks/use-color-scheme.web';
+"use client"
 
-export default function TeacherLayout() {
-  const colorScheme = useColorScheme();
-    const { user } = useAuth();
+import { Tabs, Redirect } from "expo-router"
+import { useAuth } from "@/context/AuthContext"
+import { Colors } from "@/constants/theme"
+import { HapticTab } from "@/components/haptic-tab"
+import { useColorScheme } from "@/hooks/use-color-scheme"
+import { Ionicons } from "@expo/vector-icons"
 
-  if (user?.role !== 'TEACHER') {
-    return <Redirect href="/login" />;
+export default function TeacherTabsLayout() {
+  const colorScheme = useColorScheme()
+  const { user } = useAuth()
+
+  if (user?.role !== "TEACHER") {
+    return <Redirect href="/(auth)/login" />
   }
 
   return (
     <Tabs
-          screenOptions={{
-            tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-            headerShown: false,
-            tabBarButton: HapticTab,
-            tabBarStyle: {
-              backgroundColor: '#101010',
-              borderTopColor: '#202020',
-            },
-          }}>
-      {/* <Stack.Screen
-        name="TeacherDashboard"
+      screenOptions={{
+        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+        headerShown: false,
+        tabBarButton: HapticTab,
+        tabBarStyle: {
+          backgroundColor: "#101010",
+          borderTopColor: "#202020",
+        },
+      }}
+    >
+      <Tabs.Screen
+        name="index"
         options={{
-          title: 'Teacher Dashboard',
-          headerShown: true,
-        }}
-      /> */}
-      <Stack.Screen
-        name="ClassListScreen"
-        options={{
-          title: 'My Classes',
-          headerShown: true,
+          title: "Dashboard",
+          tabBarIcon: ({ color }) => <Ionicons name="speedometer" size={28} color={color} />,
         }}
       />
-      <Stack.Screen
+      <Tabs.Screen
+        name="ClassListScreen"
+        options={{
+          title: "My Classes",
+          tabBarIcon: ({ color }) => <Ionicons name="list" size={28} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="SessionScreen"
         options={{
-          title: 'Session',
-          headerShown: true,
+          title: "Session",
+          tabBarIcon: ({ color }) => <Ionicons name="time" size={28} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="ProfileScreen"
+        options={{
+          title: "Profile",
+          tabBarIcon: ({ color }) => <Ionicons name="person" size={28} color={color} />,
         }}
       />
     </Tabs>
-  );
+  )
 }

@@ -12,6 +12,7 @@ const attendanceRoutes = require("./routes/attendance")
 const reportRoutes = require("./routes/reports")
 const devRoutes = require("./routes/dev")
 const adminRoutes = require("./routes/admin")
+const fingerprintRoutes = require("./routes/fingerprints")
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -33,6 +34,7 @@ app.use("/api/sessions", sessionRoutes)
 app.use("/api/attendance", attendanceRoutes)
 app.use("/api/reports", reportRoutes)
 app.use("/api/admin", adminRoutes)
+app.use("/api/fingerprints", fingerprintRoutes)
 
 // Development routes (only in dev mode)
 if (process.env.DEV_MODE === "true") {

@@ -13,13 +13,13 @@ import {
   RefreshControl,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
-import { api } from "@/services/api"
+import { apiService } from "@/services/api"
 import { useRouter } from "expo-router"
 
 const UserManagement = () => {
   const navigation = useRouter()
-  const params = new URLSearchParams(window.location.search);
-  const initialRole = params.get("role") || "ALL";
+  const params = new URLSearchParams(window.location.search)
+  const initialRole = params.get("role") || "ALL"
   const [users, setUsers] = useState([])
   const [filteredUsers, setFilteredUsers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -47,7 +47,7 @@ const UserManagement = () => {
 
   const loadUsers = async () => {
     try {
-      const response = await api.get("/users")
+      const response = await apiService.get("/users")
       if (response.success) {
         setUsers(response.data)
       }
@@ -116,14 +116,14 @@ const UserManagement = () => {
     try {
       if (editingUser) {
         // Update user
-        const response = await api.put(`/users/${editingUser.id}`, formData)
+        const response = await apiService.put(`/users/${editingUser.id}`, formData)
         if (response.success) {
           Alert.alert("Success", "User updated successfully")
           loadUsers()
         }
       } else {
         // Create user
-        const response = await api.post("/users", formData)
+        const response = await apiService.post("/users", formData)
         if (response.success) {
           Alert.alert("Success", "User created successfully")
           loadUsers()
@@ -144,7 +144,7 @@ const UserManagement = () => {
         style: "destructive",
         onPress: async () => {
           try {
-            const response = await api.delete(`/users/${user.id}`)
+            const response = await apiService.delete(`/users/${user.id}`)
             if (response.success) {
               Alert.alert("Success", "User deleted successfully")
               loadUsers()
@@ -156,6 +156,10 @@ const UserManagement = () => {
         },
       },
     ])
+  }
+
+  const handleViewDetails = (user) => {
+    navigation.push(`/user-details/${user.id}`)
   }
 
   const renderUser = ({ item }) => (
@@ -174,6 +178,9 @@ const UserManagement = () => {
         </View>
       </View>
       <View style={styles.userActions}>
+        <TouchableOpacity style={styles.actionButton} onPress={() => handleViewDetails(item)}>
+          <Ionicons name="eye-outline" size={20} color="#10b981" />
+        </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton} onPress={() => openEditModal(item)}>
           <Ionicons name="create" size={20} color="#3b82f6" />
         </TouchableOpacity>
