@@ -4104,7 +4104,7 @@ expo-linking@~8.0.8:
     expo-constants "~18.0.8"
     invariant "^2.2.4"
 
-expo-local-authentication@^17.0.7:
+expo-local-authentication@~17.0.7:
   version "17.0.7"
   resolved "https://registry.yarnpkg.com/expo-local-authentication/-/expo-local-authentication-17.0.7.tgz#799239fc817cf8a16ea047c96425ff05ed1e502a"
   integrity sha512-yRWcgYn/OIwxEDEk7cM7tRjQSHaTp5hpKwzq+g9NmSMJ1etzUzt0yGzkDiOjObj3YqFo0ucyDJ8WfanLhZDtMw==

@@ -148,6 +148,9 @@ export default function SessionScreen() {
       setActiveSession(newSession)
       setDebugInfo(`Session started successfully: ${newSession.code}`)
       
+      // Update the route parameters to include sessionId
+      router.setParams({ sessionId: newSession.id })
+      
       Alert.alert(
         "Session Started",
         `Session Code: ${newSession.code}\nStudents can now mark their attendance.`,
@@ -200,6 +203,9 @@ export default function SessionScreen() {
             setActiveSession(null)
             setAttendance([])
             setDebugInfo("Session stopped successfully")
+            
+            // Clear sessionId from route parameters
+            router.setParams({ sessionId: undefined })
             
             Alert.alert("Success", "Attendance session stopped")
           } catch (error) {

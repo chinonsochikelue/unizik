@@ -438,4 +438,163 @@ router.post("/join", authenticateJWT, authorizeRole("STUDENT"), async (req, res)
   }
 })
 
+// Join session and mark attendance with biometric authentication (Student only)
+router.post("/join-and-mark-attendance", authenticateJWT, authorizeRole("STUDENT"), async (req, res) => {
+  try {
+    const { code, sessionCode, biometricToken } = req.body
+    const studentId = req.user.id
+    
+    // Accept either 'code' or 'sessionCode' field
+    const sessionCodeValue = code || sessionCode
+
+    if (!sessionCodeValue) {
+      return res.status(400).json({ error: "Session code is required" })
+    }
+
+    if (!biometricToken) {
+      return res.status(400).json({
+        error: "Biometric authentication required",
+        code: "BIOMETRIC_REQUIRED"
+      })
+    }
+
+    // Step 1: Verify biometric authentication first
+    const fingerprint = await prisma.fingerprint.findUnique({
+      where: { userId: studentId },
+    })
+
+    if (!fingerprint) {
+      return res.status(403).json({
+        error: "Fingerprint not enrolled. Please enroll your fingerprint first.",
+        code: "FINGERPRINT_NOT_ENROLLED",
+      })
+    }
+
+    // In production, use proper cryptographic verification
+    const tokenValid = biometricToken.startsWith(`bio-${studentId}`)
+    if (!tokenValid) {
+      return res.status(403).json({
+        error: "Biometric verification failed",
+        code: "BIOMETRIC_VERIFICATION_FAILED",
+      })
+    }
+
+    // Step 2: Find active session with this code
+    const session = await prisma.session.findFirst({
+      where: {
+        code: sessionCodeValue.toUpperCase(),
+        isActive: true,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+      include: {
+        class: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            studentIds: true,
+          },
+        },
+      },
+    })
+
+    if (!session) {
+      return res.status(404).json({ 
+        error: "Invalid or expired session code",
+        code: "SESSION_NOT_FOUND"
+      })
+    }
+
+    // Step 3: Check if student is enrolled in this class, if not auto-enroll
+    const isEnrolled = session.class.studentIds.includes(studentId)
+    
+    if (!isEnrolled) {
+      await prisma.class.update({
+        where: { id: session.classId },
+        data: {
+          studentIds: {
+            push: studentId,
+          },
+        },
+      })
+      console.log(`Auto-enrolled student ${studentId} in class ${session.class.name}`)
+    }
+
+    // Step 4: Check if attendance already marked
+    const existingAttendance = await prisma.attendance.findFirst({
+      where: {
+        studentId,
+        sessionId: session.id,
+      },
+    })
+
+    if (existingAttendance) {
+      return res.status(400).json({ 
+        error: "You have already marked attendance for this session",
+        code: "ALREADY_MARKED",
+        attendance: {
+          id: existingAttendance.id,
+          status: existingAttendance.status,
+          markedAt: existingAttendance.markedAt,
+          class: session.class
+        }
+      })
+    }
+
+    // Step 5: Calculate attendance status based on timing
+    const now = new Date()
+    const sessionStart = new Date(session.startTime)
+    const minutesLate = Math.floor((now - sessionStart) / (1000 * 60))
+
+    let status = "PRESENT"
+    if (minutesLate > 15) {
+      status = "LATE"
+    }
+
+    // Step 6: Mark attendance
+    const attendance = await prisma.attendance.create({
+      data: {
+        studentId,
+        sessionId: session.id,
+        markedAt: now,
+        status,
+        notes: minutesLate > 0 ? `Marked ${minutesLate} minutes after session start` : null,
+      },
+    })
+
+    console.log(
+      `[Integrated Flow] Student ${studentId} joined session and marked attendance - Status: ${status}, Class: ${session.class.name}`
+    )
+
+    // Step 7: Return comprehensive response
+    res.json({
+      success: true,
+      message: "Successfully joined session and marked attendance",
+      session: {
+        id: session.id,
+        code: session.code,
+        class: session.class,
+        startTime: session.startTime,
+        expiresAt: session.expiresAt,
+      },
+      attendance: {
+        id: attendance.id,
+        status: attendance.status,
+        markedAt: attendance.markedAt,
+        minutesLate: minutesLate > 0 ? minutesLate : 0,
+        class: {
+          id: session.class.id,
+          name: session.class.name
+        }
+      },
+      enrolled: !isEnrolled ? "Auto-enrolled in class" : "Already enrolled"
+    })
+  } catch (error) {
+    console.error("Join session and mark attendance error:", error)
+    res.status(500).json({ error: "Failed to join session and mark attendance" })
+  }
+})
+
 module.exports = router

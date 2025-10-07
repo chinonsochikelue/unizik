@@ -6,7 +6,7 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000/a
 class ApiService {
   constructor() {
     this.client = axios.create({
-      baseURL: API_BASE_URL,
+      baseURL: "http://10.86.133.152:3001/api",
       timeout: 10000,
       headers: {
         "Content-Type": "application/json",

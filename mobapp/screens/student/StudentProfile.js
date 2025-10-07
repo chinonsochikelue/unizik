@@ -22,7 +22,7 @@ export default function StudentProfile() {
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [updating, setUpdating] = useState(false);
 
-  // Form states
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -46,7 +46,7 @@ export default function StudentProfile() {
 
       const response = await apiService.get('/users/profile');
       const profileData = response.data.user || response.data;
-      
+
       setProfile(profileData);
       setFormData({
         firstName: profileData.firstName || '',
@@ -104,7 +104,7 @@ export default function StudentProfile() {
       'Are you sure you want to logout?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
+        {
           text: 'Logout',
           style: 'destructive',
           onPress: () => logout()
@@ -145,7 +145,7 @@ export default function StudentProfile() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Profile Information</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.editButton}
             onPress={() => setEditModalVisible(true)}
           >
@@ -159,17 +159,17 @@ export default function StudentProfile() {
             <Text style={styles.infoLabel}>First Name</Text>
             <Text style={styles.infoValue}>{profile?.firstName || 'Not set'}</Text>
           </View>
-          
+
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Last Name</Text>
             <Text style={styles.infoValue}>{profile?.lastName || 'Not set'}</Text>
           </View>
-          
+
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Email</Text>
             <Text style={styles.infoValue}>{profile?.email}</Text>
           </View>
-          
+
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Phone</Text>
             <Text style={styles.infoValue}>{profile?.phone || 'Not set'}</Text>
@@ -179,7 +179,7 @@ export default function StudentProfile() {
 
       {/* Actions */}
       <View style={styles.section}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.actionButton}
           onPress={() => setPasswordModalVisible(true)}
         >
@@ -187,7 +187,7 @@ export default function StudentProfile() {
           <Text style={styles.actionText}>Change Password</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.actionButton, styles.logoutButton]}
           onPress={handleLogout}
         >
@@ -206,46 +206,46 @@ export default function StudentProfile() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Edit Profile</Text>
-            
+
             <TextInput
               style={styles.input}
               placeholder="First Name"
               value={formData.firstName}
-              onChangeText={(text) => setFormData({...formData, firstName: text})}
+              onChangeText={(text) => setFormData({ ...formData, firstName: text })}
             />
-            
+
             <TextInput
               style={styles.input}
               placeholder="Last Name"
               value={formData.lastName}
-              onChangeText={(text) => setFormData({...formData, lastName: text})}
+              onChangeText={(text) => setFormData({ ...formData, lastName: text })}
             />
-            
+
             <TextInput
               style={styles.input}
               placeholder="Email"
               value={formData.email}
-              onChangeText={(text) => setFormData({...formData, email: text})}
+              onChangeText={(text) => setFormData({ ...formData, email: text })}
               keyboardType="email-address"
             />
-            
+
             <TextInput
               style={styles.input}
               placeholder="Phone"
               value={formData.phone}
-              onChangeText={(text) => setFormData({...formData, phone: text})}
+              onChangeText={(text) => setFormData({ ...formData, phone: text })}
               keyboardType="phone-pad"
             />
-            
+
             <View style={styles.modalButtons}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => setEditModalVisible(false)}
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={[styles.modalButton, styles.saveButton]}
                 onPress={updateProfile}
                 disabled={updating}
@@ -271,40 +271,40 @@ export default function StudentProfile() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Change Password</Text>
-            
+
             <TextInput
               style={styles.input}
               placeholder="Current Password"
               value={passwordData.currentPassword}
-              onChangeText={(text) => setPasswordData({...passwordData, currentPassword: text})}
+              onChangeText={(text) => setPasswordData({ ...passwordData, currentPassword: text })}
               secureTextEntry
             />
-            
+
             <TextInput
               style={styles.input}
               placeholder="New Password"
               value={passwordData.newPassword}
-              onChangeText={(text) => setPasswordData({...passwordData, newPassword: text})}
+              onChangeText={(text) => setPasswordData({ ...passwordData, newPassword: text })}
               secureTextEntry
             />
-            
+
             <TextInput
               style={styles.input}
               placeholder="Confirm New Password"
               value={passwordData.confirmPassword}
-              onChangeText={(text) => setPasswordData({...passwordData, confirmPassword: text})}
+              onChangeText={(text) => setPasswordData({ ...passwordData, confirmPassword: text })}
               secureTextEntry
             />
-            
+
             <View style={styles.modalButtons}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => setPasswordModalVisible(false)}
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={[styles.modalButton, styles.saveButton]}
                 onPress={changePassword}
                 disabled={updating}
