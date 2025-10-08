@@ -260,7 +260,8 @@ router.get("/session/:sessionId", authenticateJWT, authorizeRole("TEACHER", "ADM
             students: {
               select: {
                 id: true,
-                name: true,
+                firstName: true,
+                lastName: true,
                 email: true,
               },
             },
@@ -284,7 +285,8 @@ router.get("/session/:sessionId", authenticateJWT, authorizeRole("TEACHER", "ADM
         student: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             email: true,
           },
         },
@@ -403,7 +405,8 @@ router.get("/class/:classId/stats", authenticateJWT, authorizeRole("TEACHER", "A
         students: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             email: true,
           },
         },
@@ -439,7 +442,8 @@ router.get("/class/:classId/stats", authenticateJWT, authorizeRole("TEACHER", "A
             student: {
               select: {
                 id: true,
-                name: true,
+                firstName: true,
+                lastName: true,
                 email: true,
               },
             },

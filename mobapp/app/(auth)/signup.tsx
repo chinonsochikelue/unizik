@@ -23,7 +23,8 @@ import { Image } from "expo-image"
 
 export default function SignupScreen() {
   const [formData, setFormData] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -81,9 +82,9 @@ export default function SignupScreen() {
   }, [])
 
   const handleRegister = async () => {
-    const { name, email, password, confirmPassword, role } = formData
+    const { firstName, lastName, email, password, confirmPassword, role } = formData
 
-    if (!name || !email || !password || !confirmPassword) {
+    if (!firstName || !lastName || !email || !password || !confirmPassword) {
       Alert.alert("Error", "Please fill in all fields")
       return
     }
@@ -98,8 +99,18 @@ export default function SignupScreen() {
       return
     }
 
+    // Check password complexity
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$.,!%*?&])[A-Za-z\d@$.,!%*?&]/
+    if (!passwordRegex.test(password)) {
+      Alert.alert(
+        "Error", 
+        "Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character (@$.,!%*?&)"
+      )
+      return
+    }
+
     setLoading(true)
-    const result = await register({ name, email, password, role })
+    const result = await register({ firstName, lastName, email, password, role })
     setLoading(false)
 
     if (result.success) {
@@ -145,10 +156,41 @@ export default function SignupScreen() {
 
   const getPasswordStrength = (password: string) => {
     if (password.length === 0) return { strength: 0, label: '', color: '#e2e8f0' }
-    if (password.length < 6) return { strength: 25, label: 'Weak', color: '#ef4444' }
-    if (password.length < 8) return { strength: 50, label: 'Fair', color: '#f59e0b' }
-    if (password.length < 12) return { strength: 75, label: 'Good', color: '#3b82f6' }
-    return { strength: 100, label: 'Strong', color: '#10b981' }
+    
+    let score = 0
+    let label = 'Very Weak'
+    let color = '#ef4444'
+    
+    // Length check
+    if (password.length >= 8) score += 25
+    
+    // Lowercase check
+    if (/[a-z]/.test(password)) score += 25
+    
+    // Uppercase check  
+    if (/[A-Z]/.test(password)) score += 25
+    
+    // Number check
+    if (/\d/.test(password)) score += 12.5
+    
+    // Special character check (backend specific characters)
+    if (/[@$.,!%*?&]/.test(password)) score += 12.5
+    
+    if (score >= 100) {
+      label = 'Strong'
+      color = '#10b981'
+    } else if (score >= 75) {
+      label = 'Good'
+      color = '#3b82f6'
+    } else if (score >= 50) {
+      label = 'Fair'
+      color = '#f59e0b'
+    } else if (score >= 25) {
+      label = 'Weak'
+      color = '#ef4444'
+    }
+    
+    return { strength: score, label, color }
   }
 
   const passwordStrength = getPasswordStrength(formData.password)
@@ -215,28 +257,55 @@ export default function SignupScreen() {
                 <Text style={styles.title}>Create Account</Text>
                 <Text style={styles.subtitle}>Fill in your details to get started</Text>
 
-                {/* Name Input */}
+                {/* First Name Input */}
                 <View style={styles.inputContainer}>
-                  <Text style={styles.label}>Full Name</Text>
+                  <Text style={styles.label}>First Name</Text>
                   <View 
                     style={[
                       styles.inputWrapper,
-                      focusedInput === 'name' && styles.inputWrapperFocused
+                      focusedInput === 'firstName' && styles.inputWrapperFocused
                     ]}
                   >
                     <Ionicons 
                       name="person-outline" 
                       size={20} 
-                      color={focusedInput === 'name' ? "#667eea" : "#94a3b8"} 
+                      color={focusedInput === 'firstName' ? "#667eea" : "#94a3b8"} 
                     />
                     <TextInput
                       style={styles.input}
-                      value={formData.name}
-                      onChangeText={(value) => updateFormData("name", value)}
-                      placeholder="John Doe"
+                      value={formData.firstName}
+                      onChangeText={(value) => updateFormData("firstName", value)}
+                      placeholder="John"
                       placeholderTextColor="#94a3b8"
                       autoCapitalize="words"
-                      onFocus={() => setFocusedInput('name')}
+                      onFocus={() => setFocusedInput('firstName')}
+                      onBlur={() => setFocusedInput(null)}
+                    />
+                  </View>
+                </View>
+
+                {/* Last Name Input */}
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>Last Name</Text>
+                  <View 
+                    style={[
+                      styles.inputWrapper,
+                      focusedInput === 'lastName' && styles.inputWrapperFocused
+                    ]}
+                  >
+                    <Ionicons 
+                      name="person-outline" 
+                      size={20} 
+                      color={focusedInput === 'lastName' ? "#667eea" : "#94a3b8"} 
+                    />
+                    <TextInput
+                      style={styles.input}
+                      value={formData.lastName}
+                      onChangeText={(value) => updateFormData("lastName", value)}
+                      placeholder="Doe"
+                      placeholderTextColor="#94a3b8"
+                      autoCapitalize="words"
+                      onFocus={() => setFocusedInput('lastName')}
                       onBlur={() => setFocusedInput(null)}
                     />
                   </View>
@@ -331,7 +400,7 @@ export default function SignupScreen() {
                       style={styles.input}
                       value={formData.password}
                       onChangeText={(value) => updateFormData("password", value)}
-                      placeholder="Minimum 8 characters"
+                      placeholder="8+ chars, A-z, 0-9, @$.,!%*?&"
                       placeholderTextColor="#94a3b8"
                       secureTextEntry={!showPassword}
                       autoCapitalize="none"
@@ -349,6 +418,11 @@ export default function SignupScreen() {
                       />
                     </TouchableOpacity>
                   </View>
+                  
+                  {/* Password Requirements */}
+                  <Text style={styles.requirementsText}>
+                    Must include: lowercase, uppercase, number, special character (@$.,!%*?&)
+                  </Text>
                   
                   {/* Password Strength Indicator */}
                   {formData.password.length > 0 && (
@@ -658,6 +732,13 @@ const styles = StyleSheet.create({
     color: '#ef4444',
     marginTop: 4,
     fontWeight: '500',
+  },
+  requirementsText: {
+    fontSize: 11,
+    color: '#64748b',
+    marginTop: 4,
+    fontWeight: '400',
+    lineHeight: 16,
   },
   registerButton: {
     borderRadius: 14,

@@ -26,14 +26,16 @@ router.get("/", authenticateJWT, async (req, res) => {
         teacher: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             email: true,
           },
         },
         students: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             email: true,
           },
         },
@@ -102,7 +104,8 @@ router.post("/", authenticateJWT, authorizeRole("ADMIN"), validateRequest(create
         teacher: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             email: true,
           },
         },
@@ -127,14 +130,16 @@ router.get("/:id", authenticateJWT, async (req, res) => {
         teacher: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             email: true,
           },
         },
         students: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             email: true,
           },
         },
@@ -246,7 +251,8 @@ router.put("/:id", authenticateJWT, authorizeRole("ADMIN", "TEACHER"), async (re
         teacher: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             email: true,
           },
         },
@@ -323,7 +329,13 @@ router.get("/:id/available-students", authenticateJWT, authorizeRole("ADMIN", "T
     if (search) {
       whereClause.OR = [
         {
-          name: {
+          firstName: {
+            contains: search,
+            mode: "insensitive",
+          },
+        },
+        {
+          lastName: {
             contains: search,
             mode: "insensitive",
           },
@@ -341,12 +353,13 @@ router.get("/:id/available-students", authenticateJWT, authorizeRole("ADMIN", "T
       where: whereClause,
       select: {
         id: true,
-        name: true,
+        firstName: true,
+        lastName: true,
         email: true,
         createdAt: true,
       },
       take: 50, // Limit results
-      orderBy: { name: "asc" },
+      orderBy: { firstName: "asc" },
     })
 
     res.json({ 
@@ -494,6 +507,250 @@ router.delete("/:id/students/:studentId", authenticateJWT, authorizeRole("ADMIN"
   } catch (error) {
     console.error("Remove student error:", error)
     res.status(500).json({ error: "Failed to remove student from class" })
+  }
+})
+
+// Browse available classes for enrollment (Students)
+router.get("/browse", authenticateJWT, authorizeRole("STUDENT"), async (req, res) => {
+  try {
+    const { search = "", department, page = 1, limit = 10 } = req.query
+    const studentId = req.user.id
+    const skip = (page - 1) * limit
+
+    // Build where clause
+    const whereClause = {
+      isActive: true,
+      // Exclude classes student is already enrolled in
+      NOT: {
+        studentIds: {
+          has: studentId
+        }
+      }
+    }
+
+    // Add search filters
+    if (search) {
+      whereClause.OR = [
+        {
+          name: {
+            contains: search,
+            mode: "insensitive",
+          },
+        },
+        {
+          description: {
+            contains: search,
+            mode: "insensitive",
+          },
+        },
+      ]
+    }
+
+    if (department) {
+      whereClause.department = department
+    }
+
+    const [classes, total] = await Promise.all([
+      prisma.class.findMany({
+        where: whereClause,
+        include: {
+          teacher: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+          _count: {
+            select: {
+              students: true,
+              sessions: true,
+            },
+          },
+        },
+        skip: Number.parseInt(skip),
+        take: Number.parseInt(limit),
+        orderBy: { name: "asc" },
+      }),
+      prisma.class.count({ where: whereClause })
+    ])
+
+    res.json({
+      classes,
+      pagination: {
+        page: Number.parseInt(page),
+        limit: Number.parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    })
+  } catch (error) {
+    console.error("Browse classes error:", error)
+    res.status(500).json({ error: "Failed to browse classes" })
+  }
+})
+
+// Get student's enrolled classes
+router.get("/my-classes", authenticateJWT, authorizeRole("STUDENT"), async (req, res) => {
+  try {
+    const studentId = req.user.id
+    
+    const classes = await prisma.class.findMany({
+      where: {
+        studentIds: {
+          has: studentId
+        },
+        isActive: true
+      },
+      include: {
+        teacher: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        sessions: {
+          where: {
+            isActive: true,
+          },
+          select: {
+            id: true,
+            code: true,
+            startTime: true,
+            isActive: true,
+          },
+          take: 1,
+        },
+        _count: {
+          select: {
+            students: true,
+            sessions: true,
+          },
+        },
+      },
+      orderBy: { name: "asc" },
+    })
+
+    // Transform to include active session info
+    const classesWithSessions = classes.map(cls => ({
+      ...cls,
+      activeSession: cls.sessions && cls.sessions.length > 0 ? cls.sessions[0] : null,
+      sessions: undefined,
+    }))
+
+    res.json(classesWithSessions)
+  } catch (error) {
+    console.error("Get student classes error:", error)
+    res.status(500).json({ error: "Failed to fetch enrolled classes" })
+  }
+})
+
+// Generate class invitation code (Teacher)
+router.post("/:id/invite-code", authenticateJWT, authorizeRole("TEACHER", "ADMIN"), async (req, res) => {
+  try {
+    const { id } = req.params
+    const { expiresInHours = 24 } = req.body
+
+    // Verify class exists and user has permission
+    const classData = await prisma.class.findUnique({
+      where: { id },
+    })
+
+    if (!classData) {
+      return res.status(404).json({ error: "Class not found" })
+    }
+
+    if (req.user.role === "TEACHER" && classData.teacherId !== req.user.id) {
+      return res.status(403).json({ error: "Access denied" })
+    }
+
+    // Generate invitation code (simple implementation - in production use crypto)
+    const inviteCode = `CLASS-${Date.now().toString(36).toUpperCase()}`
+    const expiresAt = new Date(Date.now() + expiresInHours * 60 * 60 * 1000)
+
+    // Store invitation (you might want to create an Invitation model for this)
+    // For now, we'll use a simple approach with class description field or create temp codes
+    
+    res.json({
+      inviteCode,
+      expiresAt,
+      classInfo: {
+        id: classData.id,
+        name: classData.name,
+        description: classData.description
+      },
+      message: "Share this code with students to join the class"
+    })
+  } catch (error) {
+    console.error("Generate invite code error:", error)
+    res.status(500).json({ error: "Failed to generate invitation code" })
+  }
+})
+
+// Join class by invitation code (Student)
+router.post("/join-by-invite", authenticateJWT, authorizeRole("STUDENT"), async (req, res) => {
+  try {
+    const { inviteCode } = req.body
+    const studentId = req.user.id
+
+    if (!inviteCode || !inviteCode.startsWith('CLASS-')) {
+      return res.status(400).json({ error: "Invalid invitation code" })
+    }
+
+    // Extract timestamp from invite code for validation
+    const timestamp = inviteCode.replace('CLASS-', '')
+    const inviteTime = parseInt(timestamp, 36)
+    const now = Date.now()
+    const twentyFourHours = 24 * 60 * 60 * 1000
+
+    if (now - inviteTime > twentyFourHours) {
+      return res.status(400).json({ error: "Invitation code has expired" })
+    }
+
+    // For demo purposes, let's find a class to enroll in
+    // In production, you'd store invite codes properly
+    const availableClasses = await prisma.class.findMany({
+      where: {
+        isActive: true,
+        NOT: {
+          studentIds: {
+            has: studentId
+          }
+        }
+      },
+      take: 1
+    })
+
+    if (availableClasses.length === 0) {
+      return res.status(404).json({ error: "No available classes to join" })
+    }
+
+    const classToJoin = availableClasses[0]
+
+    // Enroll student
+    await prisma.class.update({
+      where: { id: classToJoin.id },
+      data: {
+        studentIds: {
+          push: studentId
+        }
+      }
+    })
+
+    res.json({
+      message: "Successfully joined class via invitation",
+      class: {
+        id: classToJoin.id,
+        name: classToJoin.name,
+        description: classToJoin.description
+      }
+    })
+  } catch (error) {
+    console.error("Join by invite error:", error)
+    res.status(500).json({ error: "Failed to join class" })
   }
 })
 

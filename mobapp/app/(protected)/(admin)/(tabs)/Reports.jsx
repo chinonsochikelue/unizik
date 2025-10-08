@@ -35,7 +35,7 @@ const Reports = () => {
         type: selectedReport,
       }
 
-      const response = await apiService.get("/reports/detailed", { params })
+      const response = await apiService.get("/admin/reports", { params })
       if (response.data?.success) {
         setReportData(response.data.data)
       }
@@ -57,7 +57,7 @@ const Reports = () => {
         format: "csv",
       }
 
-      const response = await api.get("/reports/export", { params })
+      const response = await apiService.get("/admin/reports/export", { params })
       if (response.data?.success) {
         const csvContent = response.data.data.csvData
         const fileName = `${selectedReport}_report_${startDate.toISOString().split("T")[0]}_to_${

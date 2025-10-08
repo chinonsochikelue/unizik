@@ -49,6 +49,16 @@ export default function AdminTabsLayout() {
       />
 
       <Tabs.Screen
+        name="SessionManagement"
+        options={{
+          title: 'Sessions',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="time" color={color} size={size} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
         name="Reports"
         options={{
           title: 'Reports',

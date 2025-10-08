@@ -18,7 +18,6 @@ router.get("/", authenticateJWT, authorizeRole("ADMIN"), async (req, res) => {
       where,
       select: {
         id: true,
-        name: true,
         email: true,
         role: true,
         firstName: true,
@@ -58,7 +57,6 @@ router.get("/profile", authenticateJWT, async (req, res) => {
       where: { id: req.user.id },
       select: {
         id: true,
-        name: true,
         email: true,
         role: true,
         firstName: true,
@@ -97,7 +95,6 @@ router.get("/:id", authenticateJWT, async (req, res) => {
       where: { id },
       select: {
         id: true,
-        name: true,
         email: true,
         role: true,
         firstName: true,
@@ -125,7 +122,7 @@ router.get("/:id", authenticateJWT, async (req, res) => {
 // Create user (Admin only)
 router.post("/", authenticateJWT, authorizeRole("ADMIN"), async (req, res) => {
   try {
-    const { name, email, password, role, firstName, lastName, phone, department, employeeId } = req.body
+    const { email, password, role, firstName, lastName, phone, department, employeeId } = req.body
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -143,7 +140,6 @@ router.post("/", authenticateJWT, authorizeRole("ADMIN"), async (req, res) => {
     // Create user
     const user = await prisma.user.create({
       data: {
-        name,
         email,
         password: hashedPassword,
         role,
@@ -156,7 +152,6 @@ router.post("/", authenticateJWT, authorizeRole("ADMIN"), async (req, res) => {
       },
       select: {
         id: true,
-        name: true,
         email: true,
         role: true,
         firstName: true,
@@ -203,7 +198,7 @@ router.put("/profile", authenticateJWT, async (req, res) => {
     console.log('Authenticated user:', req.user);
     console.log('Request body:', req.body);
     
-    const { firstName, lastName, email, phone, department, employeeId, name } = req.body
+    const { firstName, lastName, email, phone, department, employeeId } = req.body
     const userId = req.user.id
 
     // Prepare update data
@@ -215,7 +210,6 @@ router.put("/profile", authenticateJWT, async (req, res) => {
     if (phone !== undefined) updateData.phone = phone
     if (department !== undefined) updateData.department = department
     if (employeeId !== undefined) updateData.employeeId = employeeId
-    if (name !== undefined) updateData.name = name
 
     // Check if email is already taken by another user
     if (email) {
@@ -237,7 +231,6 @@ router.put("/profile", authenticateJWT, async (req, res) => {
       data: updateData,
       select: {
         id: true,
-        name: true,
         email: true,
         role: true,
         firstName: true,
@@ -265,7 +258,7 @@ router.put("/profile", authenticateJWT, async (req, res) => {
 router.put("/:id", authenticateJWT, async (req, res) => {
   try {
     const { id } = req.params
-    const { firstName, lastName, email, phone, department, employeeId, name, role, isActive, password } = req.body
+    const { firstName, lastName, email, phone, department, employeeId, role, isActive, password } = req.body
     
     // Users can only update their own profile, unless they're admin
     if (req.user.role !== "ADMIN" && req.user.id !== id) {
@@ -281,7 +274,6 @@ router.put("/:id", authenticateJWT, async (req, res) => {
     if (phone !== undefined) updateData.phone = phone
     if (department !== undefined) updateData.department = department
     if (employeeId !== undefined) updateData.employeeId = employeeId
-    if (name !== undefined) updateData.name = name
     
     // Only admins can change role and isActive
     if (req.user.role === "ADMIN") {
@@ -314,7 +306,6 @@ router.put("/:id", authenticateJWT, async (req, res) => {
       data: updateData,
       select: {
         id: true,
-        name: true,
         email: true,
         role: true,
         firstName: true,

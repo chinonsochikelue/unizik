@@ -241,7 +241,7 @@ const SystemSettings = () => {
         <Text style={styles.sectionTitle}>System Information</Text>
         <View style={styles.infoContainer}>
           <Text style={styles.infoText}>Version: 1.0.0</Text>
-          <Text style={styles.infoText}>Build: 2024.01.15</Text>
+          <Text style={styles.infoText}>Build: 2025.01.15</Text>
           <Text style={styles.infoText}>Database: Connected</Text>
           <Text style={styles.infoText}>Last Backup: Today, 3:00 AM</Text>
         </View>

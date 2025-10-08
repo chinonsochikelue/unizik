@@ -1,7 +1,8 @@
 const Joi = require("joi")
 
 const registerSchema = Joi.object({
-  name: Joi.string().min(2).max(100).required(),
+  firstName: Joi.string().min(1).max(50).required(),
+  lastName: Joi.string().min(1).max(50).required(),
   email: Joi.string().email().required(),
   password: Joi.string()
     .min(8)
@@ -12,6 +13,8 @@ const registerSchema = Joi.object({
         "Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character",
     }),
   role: Joi.string().valid("ADMIN", "TEACHER", "STUDENT").required(),
+  studentId: Joi.string().optional(),
+  teacherId: Joi.string().optional(),
 })
 
 const loginSchema = Joi.object({
@@ -40,11 +43,12 @@ const markAttendanceSchema = Joi.object({
 })
 
 const updateProfileSchema = Joi.object({
-  name: Joi.string().min(2).max(100).optional(),
+  firstName: Joi.string().min(1).max(50).optional(),
+  lastName: Joi.string().min(1).max(50).optional(),
   email: Joi.string().email().optional(),
   password: Joi.string()
     .min(8)
-    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*._?&]/)
     .optional()
     .messages({
       "string.pattern.base":

@@ -13,12 +13,12 @@ datasource db {
 model User {
   id         String   @id @default(auto()) @map("_id") @db.ObjectId
   email      String   @unique
-  name       String
-  firstName  String?
-  lastName   String?
+  firstName  String
+  lastName   String
+  studentId  String?
+  teacherId  String?
   phone      String?
   department String?
-  employeeId String?
   password   String
   role       Role     @default(STUDENT)
   isActive   Boolean  @default(true)
@@ -57,17 +57,18 @@ model RefreshToken {
 model Class {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   name        String
+  code        String   @unique
   description String?
-  teacherId   String   @db.ObjectId
+  teacherId   String?  @db.ObjectId
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relations
-  teacher  User        @relation("TeacherClasses", fields: [teacherId], references: [id])
-  students User[]      @relation("StudentClasses", fields: [studentIds], references: [id])
-  studentIds String[]  @db.ObjectId
-  sessions Session[]
+  teacher    User?       @relation("TeacherClasses", fields: [teacherId], references: [id])
+  students   User[]      @relation("StudentClasses", fields: [studentIds], references: [id])
+  studentIds String[]    @db.ObjectId
+  sessions   Session[]
 
   @@map("classes")
 }
@@ -133,4 +134,18 @@ enum AttendanceStatus {
   ABSENT
   LATE
   EXCUSED
+}
+
+model SystemSettings {
+  id                   String   @id @default(auto()) @map("_id") @db.ObjectId
+  key                  String   @unique
+  value                String   // JSON string for complex values
+  dataType             String   // "string", "number", "boolean", "object"
+  description          String?
+  category             String   @default("general")
+  isReadOnly          Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("system_settings")
 }

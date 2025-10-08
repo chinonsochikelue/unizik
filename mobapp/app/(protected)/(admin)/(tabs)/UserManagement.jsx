@@ -47,9 +47,14 @@ const UserManagement = () => {
 
   const loadUsers = async () => {
     try {
-      const response = await apiService.get("/users")
-      if (response.success) {
-        setUsers(response.data)
+      const params = {
+        role: selectedRole === "ALL" ? undefined : selectedRole,
+        search: searchQuery || undefined,
+        limit: 100
+      }
+      const response = await apiService.get("/admin/users", { params })
+      if (response.data?.success) {
+        setUsers(response.data.data)
       }
     } catch (error) {
       console.error("Error loading users:", error)
@@ -116,15 +121,15 @@ const UserManagement = () => {
     try {
       if (editingUser) {
         // Update user
-        const response = await apiService.put(`/users/${editingUser.id}`, formData)
-        if (response.success) {
+        const response = await apiService.put(`/admin/users/${editingUser.id}`, formData)
+        if (response.data?.success) {
           Alert.alert("Success", "User updated successfully")
           loadUsers()
         }
       } else {
         // Create user
-        const response = await apiService.post("/users", formData)
-        if (response.success) {
+        const response = await apiService.post("/admin/users", formData)
+        if (response.data?.success) {
           Alert.alert("Success", "User created successfully")
           loadUsers()
         }
@@ -132,7 +137,8 @@ const UserManagement = () => {
       setModalVisible(false)
     } catch (error) {
       console.error("Error saving user:", error)
-      Alert.alert("Error", "Failed to save user")
+      const message = error.response?.data?.message || "Failed to save user"
+      Alert.alert("Error", message)
     }
   }
 
@@ -144,14 +150,15 @@ const UserManagement = () => {
         style: "destructive",
         onPress: async () => {
           try {
-            const response = await apiService.delete(`/users/${user.id}`)
-            if (response.success) {
+            const response = await apiService.delete(`/admin/users/${user.id}`)
+            if (response.data?.success) {
               Alert.alert("Success", "User deleted successfully")
               loadUsers()
             }
           } catch (error) {
             console.error("Error deleting user:", error)
-            Alert.alert("Error", "Failed to delete user")
+            const message = error.response?.data?.message || "Failed to delete user"
+            Alert.alert("Error", message)
           }
         },
       },

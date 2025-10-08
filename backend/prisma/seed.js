@@ -22,11 +22,12 @@ async function main() {
   const saltRounds = 12
 
   // Create Admin user
-  const adminPassword = await bcrypt.hash("Admin123!", saltRounds)
+  const adminPassword = await bcrypt.hash("admin123", saltRounds)
   const admin = await prisma.user.create({
     data: {
-      name: "System Administrator",
-      email: "admin@example.com",
+      firstName: "System",
+      lastName: "Administrator",
+      email: "admin@unizik.edu.ng",
       password: adminPassword,
       role: "ADMIN",
       isActive: true,
@@ -36,13 +37,20 @@ async function main() {
   const teacherPassword = await bcrypt.hash("Teacher123!", saltRounds)
   const teachers = []
 
-  const teacherNames = ["Dr. John Smith", "Prof. Sarah Johnson", "Dr. Michael Brown", "Prof. Emily Davis"]
+  const teacherData = [
+    { firstName: "Dr. John", lastName: "Smith" },
+    { firstName: "Prof. Sarah", lastName: "Johnson" },
+    { firstName: "Dr. Michael", lastName: "Brown" },
+    { firstName: "Prof. Emily", lastName: "Davis" }
+  ]
 
-  for (let i = 0; i < teacherNames.length; i++) {
+  for (let i = 0; i < teacherData.length; i++) {
     const teacher = await prisma.user.create({
       data: {
-        name: teacherNames[i],
-        email: `teacher${i + 1}@example.com`,
+        firstName: teacherData[i].firstName,
+        lastName: teacherData[i].lastName,
+        email: `teacher${i + 1}@unizik.edu.ng`,
+        teacherId: `TCH${String(i + 1).padStart(3, '0')}`,
         password: teacherPassword,
         role: "TEACHER",
         isActive: true,
@@ -94,8 +102,10 @@ async function main() {
     const lastName = lastNames[Math.floor(i / firstNames.length) % lastNames.length]
     const student = await prisma.user.create({
       data: {
-        name: `${firstName} ${lastName}`,
-        email: `student${i + 1}@example.com`,
+        firstName,
+        lastName,
+        email: `student${i + 1}@unizik.edu.ng`,
+        studentId: `STU${String(i + 1).padStart(4, '0')}`,
         password: studentPassword,
         role: "STUDENT",
         isActive: true,
@@ -111,30 +121,35 @@ async function main() {
   const classData = [
     {
       name: "Computer Science 101",
+      code: "CS101",
       description: "Introduction to Computer Science and Programming",
       teacherId: teachers[0].id,
       studentIds: students.slice(0, 15).map((s) => s.id),
     },
     {
       name: "Mathematics 201",
+      code: "MTH201",
       description: "Advanced Mathematics and Statistics",
       teacherId: teachers[1].id,
       studentIds: students.slice(5, 18).map((s) => s.id),
     },
     {
       name: "Physics 301",
+      code: "PHY301",
       description: "Classical and Modern Physics",
       teacherId: teachers[2].id,
       studentIds: students.slice(0, 12).map((s) => s.id),
     },
     {
       name: "Data Structures",
+      code: "CS202",
       description: "Algorithms and Data Structures",
       teacherId: teachers[0].id,
       studentIds: students.slice(8, 20).map((s) => s.id),
     },
     {
       name: "Web Development",
+      code: "CS305",
       description: "Full Stack Web Development",
       teacherId: teachers[3].id,
       studentIds: students.slice(2, 14).map((s) => s.id),
@@ -295,83 +310,16 @@ async function main() {
   console.log(`- Fingerprint templates: ${await prisma.fingerprint.count()}`)
 
   console.log("\n🔐 Sample login credentials:")
-  console.log("Admin: admin@example.com / Admin123!")
-  console.log("Teacher: teacher1@example.com / Teacher123!")
-  console.log("Students: student1@example.com through student20@example.com / Student123!")
+  console.log("Admin: admin@unizik.edu.ng / admin123")
+  console.log("Teacher: teacher1@unizik.edu.ng / Teacher123!")
+  console.log("Students: student1@unizik.edu.ng through student20@unizik.edu.ng / Student123!")
 
   console.log("\n🎫 Sample JWT tokens (valid for 15 minutes):")
   console.log("Admin Access Token:", tokens.admin.accessToken)
   console.log("Teacher Access Token:", tokens.teacher.accessToken)
   console.log("Student Access Token:", tokens.student.accessToken)
 
-  // Write tokens to file for easy access
-  const fs = require("fs")
-  const tokensContent = `# Sample JWT Tokens for Testing
-
-## Login Credentials
-- **Admin**: admin@example.com / Admin123!
-- **Teachers**: teacher1@example.com through teacher${teachers.length}@example.com / Teacher123!
-- **Students**: student1@example.com through student${students.length}@example.com / Student123!
-
-## Sample Access Tokens (Valid for 15 minutes)
-
-### Admin Token
-\`\`\`
-${tokens.admin.accessToken}
-\`\`\`
-
-### Teacher Token
-\`\`\`
-${tokens.teacher.accessToken}
-\`\`\`
-
-### Student Token
-\`\`\`
-${tokens.student.accessToken}
-\`\`\`
-
-## Sample Refresh Tokens (Valid for 7 days)
-
-### Admin Refresh Token
-\`\`\`
-${tokens.admin.refreshToken}
-\`\`\`
-
-### Teacher Refresh Token
-\`\`\`
-${tokens.teacher.refreshToken}
-\`\`\`
-
-### Student Refresh Token
-\`\`\`
-${tokens.student.refreshToken}
-\`\`\`
-
-## Usage with curl
-
-### Login
-\`\`\`bash
-curl -X POST http://localhost:3000/api/auth/login \\
-  -H "Content-Type: application/json" \\
-  -d '{"email": "admin@example.com", "password": "Admin123!"}'
-\`\`\`
-
-### Use Access Token
-\`\`\`bash
-curl -X GET http://localhost:3000/api/users/profile \\
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN_HERE"
-\`\`\`
-
-### Refresh Token
-\`\`\`bash
-curl -X POST http://localhost:3000/api/auth/refresh \\
-  -H "Content-Type: application/json" \\
-  -d '{"refreshToken": "YOUR_REFRESH_TOKEN_HERE"}'
-\`\`\`
-`
-
-  fs.writeFileSync("tokens.md", tokensContent)
-  console.log("\n📝 Sample tokens saved to tokens.md file")
+  console.log("\n📝 Tokens can be found in the output above")
 }
 
 main()

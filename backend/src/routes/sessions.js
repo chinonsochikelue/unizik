@@ -110,7 +110,8 @@ router.get("/active", authenticateJWT, async (req, res) => {
           teacher: {
             select: {
               id: true,
-              name: true,
+              firstName: true,
+              lastName: true,
             },
           },
         },
@@ -155,7 +156,8 @@ router.get("/active", authenticateJWT, async (req, res) => {
           teacher: {
             select: {
               id: true,
-              name: true,
+              firstName: true,
+              lastName: true,
             },
           },
         },
@@ -268,7 +270,8 @@ router.get("/:id", authenticateJWT, async (req, res) => {
         teacher: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
           },
         },
         attendance: {
@@ -276,7 +279,8 @@ router.get("/:id", authenticateJWT, async (req, res) => {
             student: {
               select: {
                 id: true,
-                name: true,
+                firstName: true,
+                lastName: true,
                 email: true,
               },
             },

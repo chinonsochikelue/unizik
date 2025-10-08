@@ -10,7 +10,7 @@ const prisma = new PrismaClient()
 // Register
 router.post("/register", validateRequest(registerSchema), async (req, res) => {
   try {
-    const { name, email, password, role } = req.body
+    const { firstName, lastName, email, password, role, studentId, teacherId } = req.body
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -26,24 +26,39 @@ router.post("/register", validateRequest(registerSchema), async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, saltRounds)
 
     // Create user
+    const userData = {
+      firstName,
+      lastName,
+      email,
+      password: hashedPassword,
+      role,
+      isActive: true,
+    }
+    
+    // Add role-specific fields
+    if (role === "STUDENT" && studentId) {
+      userData.studentId = studentId
+    }
+    if (role === "TEACHER" && teacherId) {
+      userData.teacherId = teacherId
+    }
+    
     const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role,
-        isActive: true,
-      },
+      data: userData,
       select: {
         id: true,
-        name: true,
+        firstName: true,
+        lastName: true,
         email: true,
         role: true,
+        studentId: true,
+        teacherId: true,
         createdAt: true,
       },
     })
 
     res.status(201).json({
+      success: true,
       message: "User created successfully",
       user,
     })
@@ -61,6 +76,17 @@ router.post("/login", validateRequest(loginSchema), async (req, res) => {
     // Find user
     const user = await prisma.user.findUnique({
       where: { email },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        password: true,
+        role: true,
+        studentId: true,
+        teacherId: true,
+        isActive: true,
+      },
     })
 
     if (!user || !user.isActive) {
@@ -90,13 +116,17 @@ router.post("/login", validateRequest(loginSchema), async (req, res) => {
     })
 
     res.json({
+      success: true,
       accessToken,
       refreshToken,
       user: {
         id: user.id,
-        name: user.name,
+        firstName: user.firstName,
+        lastName: user.lastName,
         email: user.email,
         role: user.role,
+        studentId: user.studentId,
+        teacherId: user.teacherId,
       },
     })
   } catch (error) {
@@ -126,8 +156,12 @@ router.post("/refresh", validateRequest(refreshTokenSchema), async (req, res) =>
         user: {
           select: {
             id: true,
+            firstName: true,
+            lastName: true,
             email: true,
             role: true,
+            studentId: true,
+            teacherId: true,
             isActive: true,
           },
         },

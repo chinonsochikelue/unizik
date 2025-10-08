@@ -5,10 +5,12 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Refre
 import { LineChart, BarChart, PieChart } from "react-native-gifted-charts"
 import { Ionicons } from "@expo/vector-icons"
 import { apiService } from "@/services/api"
+import { useRouter } from "expo-router"
 
 const { width } = Dimensions.get("window")
 
-const AdminDashboard = ({ navigation }) => {
+const AdminDashboard = () => {
+  const navigation = useRouter()
   const [dashboardData, setDashboardData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -19,7 +21,7 @@ const AdminDashboard = ({ navigation }) => {
 
   const loadDashboardData = async () => {
     try {
-      const response = await apiService.get("/reports/dashboard")
+      const response = await apiService.get("/admin/dashboard")
       if (response.data?.success) {
         setDashboardData(response.data.data)
       }
@@ -89,35 +91,35 @@ const AdminDashboard = ({ navigation }) => {
           value={dashboardData?.totalStudents || 0}
           icon="people"
           color="#3b82f6"
-          onPress={() => navigation.navigate("UserManagement", { role: "STUDENT" })}
+          onPress={() => navigation.push("UserManagement", { params: { role: "STUDENT" } })}
         />
         <StatCard
           title="Total Teachers"
           value={dashboardData?.totalTeachers || 0}
           icon="school"
           color="#10b981"
-          onPress={() => navigation.navigate("UserManagement", { role: "TEACHER" })}
+          onPress={() => navigation.push("UserManagement", { params: { role: "TEACHER" } })}
         />
         <StatCard
           title="Total Admins"
           value={dashboardData?.totalAdmins || 0}
           icon="shield"
           color="#8b5cf6"
-          onPress={() => navigation.navigate("UserManagement", { role: "ADMIN" })}
+          onPress={() => navigation.push("UserManagement", { params: { role: "ADMIN" } })}
         />
         <StatCard
           title="Active Classes"
           value={dashboardData?.totalClasses || 0}
           icon="library"
           color="#f59e0b"
-          onPress={() => navigation.navigate("ClassManagement")}
+          onPress={() => navigation.push("ClassManagement")}
         />
         <StatCard
           title="Today's Sessions"
           value={dashboardData?.todaySessions || 0}
           icon="time"
           color="#ef4444"
-          onPress={() => navigation.navigate("SessionManagement")}
+          onPress={() => navigation.push("SessionManagement")}
         />
       </View>
 
@@ -208,15 +210,15 @@ const AdminDashboard = ({ navigation }) => {
       <View style={styles.actionsContainer}>
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate("UserManagement")}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.push("UserManagement")}>
             <Ionicons name="people" size={24} color="#3b82f6" />
             <Text style={styles.actionText}>Manage Users</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate("Reports")}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.push("Reports")}>
             <Ionicons name="analytics" size={24} color="#10b981" />
             <Text style={styles.actionText}>View Reports</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate("SystemSettings")}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.push("SystemSettings")}>
             <Ionicons name="settings" size={24} color="#f59e0b" />
             <Text style={styles.actionText}>Settings</Text>
           </TouchableOpacity>

@@ -425,7 +425,7 @@ export default function ProfileScreen() {
 
         {/* App Version */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>MobApp v1.0.0</Text>
+          <Text style={styles.footerText}>Unizik v1.0.0</Text>
           <Text style={styles.footerSubtext}>Made with care</Text>
         </View>
       </ScrollView>

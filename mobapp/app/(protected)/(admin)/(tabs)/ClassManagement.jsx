@@ -14,11 +14,13 @@ import {
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { apiService } from "@/services/api"
+import { useRouter } from "expo-router"
 
-const ClassManagement = ({ navigation }) => {
+const ClassManagement = () => {
   const [classes, setClasses] = useState([])
   const [filteredClasses, setFilteredClasses] = useState([])
   const [loading, setLoading] = useState(true)
+  const navigation = useRouter()
   const [refreshing, setRefreshing] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [modalVisible, setModalVisible] = useState(false)
@@ -39,9 +41,13 @@ const ClassManagement = ({ navigation }) => {
 
   const loadClasses = async () => {
     try {
-      const response = await apiService.get("/classes")
-      if (response.success) {
-        setClasses(response.data)
+      const params = {
+        search: searchQuery || undefined,
+        limit: 100
+      }
+      const response = await apiService.get("/admin/classes", { params })
+      if (response.data?.success) {
+        setClasses(response.data.data)
       }
     } catch (error) {
       console.error("Error loading classes:", error)
@@ -95,14 +101,14 @@ const ClassManagement = ({ navigation }) => {
   const handleSave = async () => {
     try {
       if (editingClass) {
-        const response = await apiService.put(`/classes/${editingClass.id}`, formData)
-        if (response.success) {
+        const response = await apiService.put(`/admin/classes/${editingClass.id}`, formData)
+        if (response.data?.success) {
           Alert.alert("Success", "Class updated successfully")
           loadClasses()
         }
       } else {
-        const response = await apiService.post("/classes", formData)
-        if (response.success) {
+        const response = await apiService.post("/admin/classes", formData)
+        if (response.data?.success) {
           Alert.alert("Success", "Class created successfully")
           loadClasses()
         }
@@ -110,7 +116,8 @@ const ClassManagement = ({ navigation }) => {
       setModalVisible(false)
     } catch (error) {
       console.error("Error saving class:", error)
-      Alert.alert("Error", "Failed to save class")
+      const message = error.response?.data?.message || "Failed to save class"
+      Alert.alert("Error", message)
     }
   }
 
@@ -122,14 +129,15 @@ const ClassManagement = ({ navigation }) => {
         style: "destructive",
         onPress: async () => {
           try {
-            const response = await apiService.delete(`/classes/${cls.id}`)
-            if (response.success) {
+            const response = await apiService.delete(`/admin/classes/${cls.id}`)
+            if (response.data?.success) {
               Alert.alert("Success", "Class deleted successfully")
               loadClasses()
             }
           } catch (error) {
             console.error("Error deleting class:", error)
-            Alert.alert("Error", "Failed to delete class")
+            const message = error.response?.data?.message || "Failed to delete class"
+            Alert.alert("Error", message)
           }
         },
       },
@@ -161,12 +169,6 @@ const ClassManagement = ({ navigation }) => {
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton} onPress={() => handleDelete(item)}>
           <Ionicons name="trash" size={20} color="#ef4444" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => navigation.navigate("ClassDetails", { classId: item.id })}
-        >
-          <Ionicons name="eye" size={20} color="#10b981" />
         </TouchableOpacity>
       </View>
     </View>

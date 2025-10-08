@@ -1,12 +1,13 @@
 import axios from "axios"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000/api"
+const API_BASE_URL = "https://unizik.onrender.com/api" || "http://localhost:3000/api"
 
 class ApiService {
   constructor() {
     this.client = axios.create({
-      baseURL: "http://10.86.133.152:3001/api",
+      baseURL: "http://10.25.29.152:3000/api",
+      // baseURL: API_BASE_URL,
       timeout: 10000,
       headers: {
         "Content-Type": "application/json",
@@ -94,6 +95,66 @@ class ApiService {
 
   delete(url, config = {}) {
     return this.client.delete(url, config)
+  }
+
+  // Class Management APIs
+  async browseClasses({ search = '', department = '', page = 1, limit = 10 } = {}) {
+    const params = new URLSearchParams()
+    if (search) params.append('search', search)
+    if (department) params.append('department', department)
+    params.append('page', page.toString())
+    params.append('limit', limit.toString())
+    
+    return this.get(`/classes/browse?${params.toString()}`)
+  }
+
+  async getMyClasses() {
+    return this.get('/classes/my-classes')
+  }
+
+  async getClassDetails(classId) {
+    return this.get(`/classes/${classId}`)
+  }
+
+  async enrollInClass({ classId, classCode }) {
+    return this.post('/classes/enroll', { classId, classCode })
+  }
+
+  async joinByInviteCode(inviteCode) {
+    return this.post('/classes/join-by-invite', { inviteCode })
+  }
+
+  async generateInviteCode(classId, expiresInHours = 24) {
+    return this.post(`/classes/${classId}/invite-code`, { expiresInHours })
+  }
+
+  async joinSession(sessionCode) {
+    return this.post('/sessions/join', { sessionCode })
+  }
+
+  async joinSessionAndMarkAttendance(sessionCode, biometricToken) {
+    return this.post('/sessions/join-and-mark-attendance', { 
+      sessionCode, 
+      biometricToken 
+    })
+  }
+
+  async getActiveSessions() {
+    return this.get('/sessions/active')
+  }
+
+  async getAvailableStudents(classId, search = '') {
+    const params = new URLSearchParams()
+    if (search) params.append('search', search)
+    return this.get(`/classes/${classId}/available-students?${params.toString()}`)
+  }
+
+  async addStudentToClass(classId, studentId) {
+    return this.post(`/classes/${classId}/students`, { studentId })
+  }
+
+  async removeStudentFromClass(classId, studentId) {
+    return this.delete(`/classes/${classId}/students/${studentId}`)
   }
 }
 

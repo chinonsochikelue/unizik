@@ -14,9 +14,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { useBiometric } from '@/hooks/useBiometric';
 import { useAttendance } from '@/hooks/useAttendance';
+import { useRouter } from 'expo-router';
 
-export default function SessionJoin({ navigation }) {
+export default function SessionJoin() {
   const { user, isAuthenticated } = useAuth();
+    const navigation = useRouter()
   const { authenticateWithBiometric, simulateBiometricAuth, isScanning } = useBiometric();
   const { joinSessionAndMarkAttendance, activeSessions, loading: attendanceLoading } = useAttendance();
   
@@ -67,7 +69,7 @@ export default function SessionJoin({ navigation }) {
           [
             {
               text: 'View History',
-              onPress: () => navigation.navigate('AttendanceHistory')
+              onPress: () => navigation.push('AttendanceHistory')
             },
             {
               text: 'OK',
