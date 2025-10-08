@@ -69,12 +69,29 @@ export default function StudentTabLayout() {
       />
 
       <Tabs.Screen
-        name="ClassEnrollment"
+        name="MyClasses"
         options={{
-          title: 'Classes',
+          title: 'My Classes',
           tabBarIcon: ({ color }) => (
             <MaterialCommunityIcons size={28} name="book-multiple" color={color} />
           ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="BrowseClasses"
+        options={{
+          title: 'Browse',
+          tabBarIcon: ({ color }) => (
+            <Ionicons size={28} name="search" color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="ClassEnrollment"
+        options={{
+          href: null, // Hide from tabs but keep for compatibility
         }}
       />
     </Tabs>

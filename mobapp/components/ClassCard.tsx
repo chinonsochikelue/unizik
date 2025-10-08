@@ -1,26 +1,31 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
+  TouchableOpacity,
   Alert,
   ActivityIndicator,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons } from '@expo/vector-icons'
+import { BlurView } from 'expo-blur'
+import { router } from 'expo-router'
+import { apiService } from '@/services/api'
+import { useBiometric } from '@/hooks/useBiometric'
 
 interface ClassCardProps {
-  classItem: {
+  classData: {
     id: string
     name: string
+    code?: string
     description?: string
-    teacher: {
+    teacher?: {
       id: string
       firstName: string
       lastName: string
       email: string
-    }
+    } | null
     _count?: {
       students: number
       sessions: number
@@ -30,176 +35,292 @@ interface ClassCardProps {
       code: string
       startTime: string
       isActive: boolean
-    } | null
+    }
   }
-  onPress?: () => void
-  onEnroll?: () => void
-  onJoinSession?: () => void
   isEnrolled?: boolean
-  showEnrollButton?: boolean
+  onEnrollSuccess?: () => void
+  onJoinSuccess?: () => void
   showJoinButton?: boolean
-  loading?: boolean
 }
 
-export const ClassCard: React.FC<ClassCardProps> = ({
-  classItem,
-  onPress,
-  onEnroll,
-  onJoinSession,
-  isEnrolled = false,
-  showEnrollButton = false,
-  showJoinButton = false,
-  loading = false,
-}) => {
-  const handleEnroll = () => {
-    if (loading) return
-    
+export function ClassCard({ 
+  classData, 
+  isEnrolled = false, 
+  onEnrollSuccess,
+  onJoinSuccess,
+  showJoinButton = false 
+}: ClassCardProps) {
+  const [enrolling, setEnrolling] = useState(false)
+  const [joining, setJoining] = useState(false)
+  const { authenticateWithBiometric } = useBiometric()
+
+  const handleEnroll = async () => {
+    if (enrolling) return
+
     Alert.alert(
       'Enroll in Class',
-      `Do you want to enroll in ${classItem.name}?`,
+      `Do you want to enroll in "${classData.name}"?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Enroll', onPress: onEnroll },
+        {
+          text: 'Enroll',
+          onPress: async () => {
+            setEnrolling(true)
+            try {
+              await apiService.enrollInClass({ classId: classData.id })
+              
+              Alert.alert(
+                'Success!',
+                `You have successfully enrolled in "${classData.name}".`,
+                [
+                  {
+                    text: 'View My Classes',
+                    onPress: () => router.push('/(tabs)/my-classes')
+                  },
+                  { text: 'OK', style: 'default' }
+                ]
+              )
+              
+              onEnrollSuccess?.()
+            } catch (error: any) {
+              console.error('Enrollment error:', error)
+              const errorMessage = error.response?.data?.error || 'Failed to enroll in class'
+              Alert.alert('Enrollment Failed', errorMessage)
+            } finally {
+              setEnrolling(false)
+            }
+          }
+        }
       ]
     )
   }
 
-  const handleJoinSession = () => {
-    if (loading || !classItem.activeSession) return
+  const handleJoinSession = async () => {
+    if (!classData.activeSession || joining) return
+
+    setJoining(true)
+    try {
+      // Require biometric authentication for session joining
+      const biometricToken = await authenticateWithBiometric()
+      
+      if (!biometricToken) {
+        Alert.alert('Authentication Required', 'Biometric authentication is required to join sessions.')
+        return
+      }
+
+      await apiService.joinSessionAndMarkAttendance(
+        classData.activeSession.code,
+        biometricToken
+      )
+
+      Alert.alert(
+        'Success!',
+        'You have successfully joined the session and your attendance has been marked.',
+        [
+          {
+            text: 'View Attendance',
+            onPress: () => router.push('/(tabs)/attendance')
+          },
+          { text: 'OK', style: 'default' }
+        ]
+      )
+      
+      onJoinSuccess?.()
+    } catch (error: any) {
+      console.error('Join session error:', error)
+      const errorMessage = error.response?.data?.error || 'Failed to join session'
+      Alert.alert('Join Session Failed', errorMessage)
+    } finally {
+      setJoining(false)
+    }
+  }
+
+  const handleViewDetails = () => {
+    router.push(`/class-details/${classData.id}`)
+  }
+
+  const getGradientColors = () => {
+    if (isEnrolled) {
+      return classData.activeSession 
+        ? ['#10b981', '#059669'] // Green for active session
+        : ['#6366f1', '#4f46e5'] // Purple for enrolled
+    }
+    return ['#667eea', '#764ba2'] // Blue for available
+  }
+
+  const renderActionButton = () => {
+    if (isEnrolled && classData.activeSession && showJoinButton) {
+      return (
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={handleJoinSession}
+          disabled={joining}
+          activeOpacity={0.8}
+        >
+          <LinearGradient
+            colors={['#10b981', '#059669']}
+            style={styles.buttonGradient}
+          >
+            {joining ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <Ionicons name="radio-outline" size={20} color="#fff" />
+                <Text style={styles.buttonText}>Join Session</Text>
+              </>
+            )}
+          </LinearGradient>
+        </TouchableOpacity>
+      )
+    }
+
+    if (!isEnrolled) {
+      return (
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={handleEnroll}
+          disabled={enrolling}
+          activeOpacity={0.8}
+        >
+          <LinearGradient
+            colors={['#667eea', '#764ba2']}
+            style={styles.buttonGradient}
+          >
+            {enrolling ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <Ionicons name="add-circle-outline" size={20} color="#fff" />
+                <Text style={styles.buttonText}>Enroll</Text>
+              </>
+            )}
+          </LinearGradient>
+        </TouchableOpacity>
+      )
+    }
+
+    return null
+  }
+
+  const getStatusIndicator = () => {
+    if (isEnrolled && classData.activeSession) {
+      return (
+        <View style={[styles.statusBadge, styles.activeBadge]}>
+          <View style={styles.pulsingDot} />
+          <Text style={styles.statusText}>Live Session</Text>
+        </View>
+      )
+    }
     
-    Alert.alert(
-      'Join Active Session',
-      `Join the active session for ${classItem.name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Join', onPress: onJoinSession },
-      ]
-    )
+    if (isEnrolled) {
+      return (
+        <View style={[styles.statusBadge, styles.enrolledBadge]}>
+          <Ionicons name="checkmark-circle" size={16} color="#10b981" />
+          <Text style={[styles.statusText, { color: '#10b981' }]}>Enrolled</Text>
+        </View>
+      )
+    }
+
+    return null
   }
 
   return (
     <TouchableOpacity
       style={styles.card}
-      onPress={onPress}
-      activeOpacity={0.8}
-      disabled={loading}
+      onPress={handleViewDetails}
+      activeOpacity={0.9}
     >
-      <LinearGradient
-        colors={['rgba(255, 255, 255, 0.9)', 'rgba(255, 255, 255, 0.8)']}
-        style={styles.cardGradient}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.classInfo}>
-            <Text style={styles.className} numberOfLines={2}>
-              {classItem.name}
-            </Text>
-            <Text style={styles.teacherName}>
-              {classItem.teacher.firstName} {classItem.teacher.lastName}
-            </Text>
-          </View>
-          
-          {isEnrolled && (
-            <View style={styles.enrolledBadge}>
-              <Ionicons name="checkmark-circle" size={20} color="#10b981" />
-              <Text style={styles.enrolledText}>Enrolled</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Description */}
-        {classItem.description && (
-          <Text style={styles.description} numberOfLines={3}>
-            {classItem.description}
-          </Text>
-        )}
-
-        {/* Stats */}
-        <View style={styles.stats}>
-          <View style={styles.statItem}>
-            <Ionicons name="people-outline" size={16} color="#64748b" />
-            <Text style={styles.statText}>
-              {classItem._count?.students || 0} students
-            </Text>
-          </View>
-          
-          <View style={styles.statItem}>
-            <Ionicons name="time-outline" size={16} color="#64748b" />
-            <Text style={styles.statText}>
-              {classItem._count?.sessions || 0} sessions
-            </Text>
-          </View>
-        </View>
-
-        {/* Active Session Banner */}
-        {classItem.activeSession && (
-          <View style={styles.activeSessionBanner}>
-            <LinearGradient
-              colors={['#10b981', '#059669']}
-              style={styles.sessionGradient}
-            >
-              <Ionicons name="radio-outline" size={16} color="#fff" />
-              <Text style={styles.activeSessionText}>
-                Live Session: {classItem.activeSession.code}
+      <BlurView intensity={95} tint="light" style={styles.cardBlur}>
+        <LinearGradient
+          colors={[...getGradientColors(), 'transparent']}
+          style={styles.cardGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
+        
+        <View style={styles.cardContent}>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.classInfo}>
+              <Text style={styles.className} numberOfLines={2}>
+                {classData.name}
               </Text>
-              {showJoinButton && (
-                <TouchableOpacity 
-                  style={styles.joinButton}
-                  onPress={handleJoinSession}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={styles.joinButtonText}>Join</Text>
-                  )}
-                </TouchableOpacity>
+              {classData.code && (
+                <Text style={styles.classCode}>{classData.code}</Text>
               )}
-            </LinearGradient>
+            </View>
+            
+            {getStatusIndicator()}
           </View>
-        )}
 
-        {/* Action Buttons */}
-        {showEnrollButton && !isEnrolled && (
-          <TouchableOpacity 
-            style={styles.enrollButton}
-            onPress={handleEnroll}
-            disabled={loading}
-          >
-            <LinearGradient
-              colors={['#667eea', '#764ba2']}
-              style={styles.enrollGradient}
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <>
-                  <Ionicons name="add-circle-outline" size={20} color="#fff" />
-                  <Text style={styles.enrollButtonText}>Enroll</Text>
-                </>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
-        )}
-      </LinearGradient>
+          {/* Teacher Info */}
+          <View style={styles.teacherSection}>
+            <Ionicons name="person-outline" size={18} color="#64748b" />
+            <Text style={styles.teacherName}>
+              {classData.teacher ? 
+                `${classData.teacher.firstName} ${classData.teacher.lastName}` : 
+                'No instructor assigned'
+              }
+            </Text>
+          </View>
+
+          {/* Description */}
+          {classData.description && (
+            <Text style={styles.description} numberOfLines={2}>
+              {classData.description}
+            </Text>
+          )}
+
+          {/* Stats */}
+          <View style={styles.statsSection}>
+            <View style={styles.statItem}>
+              <Ionicons name="people-outline" size={16} color="#64748b" />
+              <Text style={styles.statText}>
+                {classData._count?.students || 0} students
+              </Text>
+            </View>
+            
+            <View style={styles.statItem}>
+              <Ionicons name="calendar-outline" size={16} color="#64748b" />
+              <Text style={styles.statText}>
+                {classData._count?.sessions || 0} sessions
+              </Text>
+            </View>
+          </View>
+
+          {/* Action Button */}
+          {renderActionButton()}
+        </View>
+      </BlurView>
     </TouchableOpacity>
   )
 }
 
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal: 16,
     marginVertical: 8,
-    borderRadius: 16,
-    elevation: 4,
+    marginHorizontal: 16,
+    borderRadius: 20,
+    overflow: 'hidden',
+    elevation: 6,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
     shadowRadius: 8,
   },
+  cardBlur: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+  },
   cardGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '50%',
+    opacity: 0.1,
+  },
+  cardContent: {
     padding: 20,
-    borderRadius: 16,
   },
   header: {
     flexDirection: 'row',
@@ -213,28 +334,57 @@ const styles = StyleSheet.create({
   },
   className: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#1e293b',
     marginBottom: 4,
   },
-  teacherName: {
+  classCode: {
     fontSize: 14,
-    color: '#64748b',
-    fontWeight: '500',
-  },
-  enrolledBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#dcfce7',
+    fontWeight: '600',
+    color: '#667eea',
+    backgroundColor: 'rgba(102, 126, 234, 0.1)',
     paddingHorizontal: 8,
     paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 12,
     gap: 4,
   },
-  enrolledText: {
+  activeBadge: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+  },
+  enrolledBadge: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+  },
+  statusText: {
     fontSize: 12,
-    color: '#16a34a',
+    fontWeight: '700',
+    color: '#10b981',
+  },
+  pulsingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#10b981',
+  },
+  teacherSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  teacherName: {
+    fontSize: 16,
     fontWeight: '600',
+    color: '#475569',
   },
   description: {
     fontSize: 14,
@@ -242,66 +392,41 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 16,
   },
-  stats: {
+  statsSection: {
     flexDirection: 'row',
-    gap: 20,
-    marginBottom: 12,
+    justifyContent: 'space-between',
+    marginBottom: 16,
   },
   statItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   statText: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#64748b',
     fontWeight: '500',
   },
-  activeSessionBanner: {
-    marginTop: 12,
-    borderRadius: 8,
+  actionButton: {
+    borderRadius: 12,
     overflow: 'hidden',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
   },
-  sessionGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    gap: 8,
-  },
-  activeSessionText: {
-    flex: 1,
-    fontSize: 13,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  joinButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  joinButtonText: {
-    fontSize: 12,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  enrollButton: {
-    marginTop: 16,
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  enrollGradient: {
+  buttonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
+    paddingHorizontal: 16,
     gap: 8,
   },
-  enrollButtonText: {
-    fontSize: 15,
+  buttonText: {
+    fontSize: 16,
     color: '#fff',
-    fontWeight: '600',
+    fontWeight: '700',
   },
 })
-
-export default ClassCard

@@ -6,6 +6,7 @@ const API_BASE_URL = "https://unizik.onrender.com/api" || "http://localhost:3000
 class ApiService {
   constructor() {
     this.client = axios.create({
+      // baseURL: "http://localhost:3001/api", // Updated to match backend server
       baseURL: "http://10.25.29.152:3000/api",
       // baseURL: API_BASE_URL,
       timeout: 10000,
@@ -112,6 +113,11 @@ class ApiService {
     return this.get('/classes/my-classes')
   }
 
+  // Teacher Classes API
+  async getTeacherClasses() {
+    return this.get('/classes') // This endpoint filters by teacher automatically
+  }
+
   async getClassDetails(classId) {
     return this.get(`/classes/${classId}`)
   }
@@ -155,6 +161,19 @@ class ApiService {
 
   async removeStudentFromClass(classId, studentId) {
     return this.delete(`/classes/${classId}/students/${studentId}`)
+  }
+
+  // Admin APIs for class/teacher management
+  async getAllTeachers() {
+    return this.get('/classes/teachers')
+  }
+
+  async updateClass(classId, data) {
+    return this.put(`/classes/${classId}`, data)
+  }
+
+  async assignTeacherToClass(classId, teacherId) {
+    return this.put(`/classes/${classId}`, { teacherId })
   }
 }
 

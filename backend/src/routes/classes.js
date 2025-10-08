@@ -119,6 +119,170 @@ router.post("/", authenticateJWT, authorizeRole("ADMIN"), validateRequest(create
   }
 })
 
+// Browse available classes for enrollment (Students) - MUST be before /:id route
+router.get("/browse", authenticateJWT, authorizeRole("STUDENT"), async (req, res) => {
+  try {
+    const { search = "", department, page = 1, limit = 10 } = req.query
+    const studentId = req.user.id
+    const skip = (page - 1) * limit
+
+    console.log('Browse classes request:', { studentId, search, page, limit })
+
+    // Get total count for pagination
+    const totalCount = await prisma.class.count({
+      where: {
+        isActive: true,
+      },
+    })
+
+    // Get the actual classes for this page
+    const classes = await prisma.class.findMany({
+      where: {
+        isActive: true,
+      },
+      include: {
+        teacher: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        _count: {
+          select: {
+            students: true,
+            sessions: true,
+          },
+        },
+      },
+      skip: skip,
+      take: Number.parseInt(limit),
+      orderBy: { name: "asc" },
+    })
+
+    console.log('Found classes:', classes.length, 'of', totalCount)
+
+    res.json({
+      classes,
+      totalClasses: totalCount,
+      currentPage: Number.parseInt(page),
+      totalPages: Math.ceil(totalCount / Number.parseInt(limit)),
+      hasNextPage: skip + classes.length < totalCount,
+      hasPreviousPage: Number.parseInt(page) > 1
+    })
+  } catch (error) {
+    console.error("Browse classes error:", error)
+    res.status(500).json({ error: "BROWSE_ENDPOINT_ERROR: Failed to browse classes", details: error.message })
+  }
+})
+
+// Get student's enrolled classes - MUST be before /:id route
+router.get("/my-classes", authenticateJWT, authorizeRole("STUDENT"), async (req, res) => {
+  try {
+    const studentId = req.user.id
+    
+    console.log('My classes request for student:', studentId)
+    
+    // First, let's find the student to see their enrolled classes
+    const student = await prisma.user.findUnique({
+      where: { id: studentId },
+      include: {
+        enrolledClasses: {
+          where: {
+            isActive: true
+          },
+          include: {
+            teacher: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+            sessions: {
+              where: {
+                isActive: true,
+              },
+              select: {
+                id: true,
+                code: true,
+                startTime: true,
+                isActive: true,
+              },
+              take: 1,
+            },
+            _count: {
+              select: {
+                students: true,
+                sessions: true,
+              },
+            },
+          }
+        }
+      }
+    })
+
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" })
+    }
+
+    const classes = student.enrolledClasses || []
+    console.log('Found enrolled classes:', classes.length)
+
+    // Transform to include active session info
+    const classesWithSessions = classes.map(cls => ({
+      ...cls,
+      activeSession: cls.sessions && cls.sessions.length > 0 ? cls.sessions[0] : null,
+      sessions: undefined,
+    }))
+
+    res.json(classesWithSessions)
+  } catch (error) {
+    console.error("Get student classes error:", error)
+    res.status(500).json({ error: "Failed to fetch enrolled classes", details: error.message })
+  }
+})
+
+// Get all teachers for class assignment (Admin only) - MUST be before /:id route
+router.get("/teachers", authenticateJWT, authorizeRole("ADMIN"), async (req, res) => {
+  try {
+    const teachers = await prisma.user.findMany({
+      where: {
+        role: "TEACHER",
+        isActive: true,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        teacherId: true,
+        createdAt: true,
+        teachingClasses: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+        _count: {
+          select: {
+            teachingClasses: true,
+          },
+        },
+      },
+      orderBy: { firstName: "asc" },
+    })
+
+    res.json({ teachers })
+  } catch (error) {
+    console.error("Get teachers error:", error)
+    res.status(500).json({ error: "Failed to fetch teachers" })
+  }
+})
+
 // Get class by ID
 router.get("/:id", authenticateJWT, async (req, res) => {
   try {
@@ -167,8 +331,8 @@ router.get("/:id", authenticateJWT, async (req, res) => {
 
     res.json({ class: classData })
   } catch (error) {
-    console.error("Get class error:", error)
-    res.status(500).json({ error: "Failed to fetch class" })
+    console.error("Get class BY ID error:", error)
+    res.status(500).json({ error: "GET_CLASS_BY_ID_ERROR: Failed to fetch class" })
   }
 })
 
@@ -225,7 +389,7 @@ router.post("/:id/students", authenticateJWT, authorizeRole("ADMIN", "TEACHER"),
 router.put("/:id", authenticateJWT, authorizeRole("ADMIN", "TEACHER"), async (req, res) => {
   try {
     const { id } = req.params
-    const { name, description } = req.body
+    const { name, description, teacherId } = req.body
 
     // Verify class exists
     const existingClass = await prisma.class.findUnique({
@@ -241,11 +405,27 @@ router.put("/:id", authenticateJWT, authorizeRole("ADMIN", "TEACHER"), async (re
       return res.status(403).json({ error: "Access denied" })
     }
 
+    // If teacherId is being updated, verify the new teacher exists (Admin only)
+    if (teacherId && req.user.role === "ADMIN") {
+      const teacher = await prisma.user.findFirst({
+        where: {
+          id: teacherId,
+          role: "TEACHER",
+          isActive: true,
+        },
+      })
+
+      if (!teacher) {
+        return res.status(400).json({ error: "Invalid teacher ID" })
+      }
+    }
+
     const updatedClass = await prisma.class.update({
       where: { id },
       data: {
         ...(name && { name }),
         ...(description !== undefined && { description }),
+        ...(teacherId && req.user.role === "ADMIN" && { teacherId }),
       },
       include: {
         teacher: {
@@ -507,144 +687,6 @@ router.delete("/:id/students/:studentId", authenticateJWT, authorizeRole("ADMIN"
   } catch (error) {
     console.error("Remove student error:", error)
     res.status(500).json({ error: "Failed to remove student from class" })
-  }
-})
-
-// Browse available classes for enrollment (Students)
-router.get("/browse", authenticateJWT, authorizeRole("STUDENT"), async (req, res) => {
-  try {
-    const { search = "", department, page = 1, limit = 10 } = req.query
-    const studentId = req.user.id
-    const skip = (page - 1) * limit
-
-    // Build where clause
-    const whereClause = {
-      isActive: true,
-      // Exclude classes student is already enrolled in
-      NOT: {
-        studentIds: {
-          has: studentId
-        }
-      }
-    }
-
-    // Add search filters
-    if (search) {
-      whereClause.OR = [
-        {
-          name: {
-            contains: search,
-            mode: "insensitive",
-          },
-        },
-        {
-          description: {
-            contains: search,
-            mode: "insensitive",
-          },
-        },
-      ]
-    }
-
-    if (department) {
-      whereClause.department = department
-    }
-
-    const [classes, total] = await Promise.all([
-      prisma.class.findMany({
-        where: whereClause,
-        include: {
-          teacher: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-            },
-          },
-          _count: {
-            select: {
-              students: true,
-              sessions: true,
-            },
-          },
-        },
-        skip: Number.parseInt(skip),
-        take: Number.parseInt(limit),
-        orderBy: { name: "asc" },
-      }),
-      prisma.class.count({ where: whereClause })
-    ])
-
-    res.json({
-      classes,
-      pagination: {
-        page: Number.parseInt(page),
-        limit: Number.parseInt(limit),
-        total,
-        pages: Math.ceil(total / limit),
-      },
-    })
-  } catch (error) {
-    console.error("Browse classes error:", error)
-    res.status(500).json({ error: "Failed to browse classes" })
-  }
-})
-
-// Get student's enrolled classes
-router.get("/my-classes", authenticateJWT, authorizeRole("STUDENT"), async (req, res) => {
-  try {
-    const studentId = req.user.id
-    
-    const classes = await prisma.class.findMany({
-      where: {
-        studentIds: {
-          has: studentId
-        },
-        isActive: true
-      },
-      include: {
-        teacher: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-        sessions: {
-          where: {
-            isActive: true,
-          },
-          select: {
-            id: true,
-            code: true,
-            startTime: true,
-            isActive: true,
-          },
-          take: 1,
-        },
-        _count: {
-          select: {
-            students: true,
-            sessions: true,
-          },
-        },
-      },
-      orderBy: { name: "asc" },
-    })
-
-    // Transform to include active session info
-    const classesWithSessions = classes.map(cls => ({
-      ...cls,
-      activeSession: cls.sessions && cls.sessions.length > 0 ? cls.sessions[0] : null,
-      sessions: undefined,
-    }))
-
-    res.json(classesWithSessions)
-  } catch (error) {
-    console.error("Get student classes error:", error)
-    res.status(500).json({ error: "Failed to fetch enrolled classes" })
   }
 })
 

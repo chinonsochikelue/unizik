@@ -18,11 +18,11 @@ import { router } from 'expo-router'
 import { BlurView } from 'expo-blur'
 import { apiService } from '@/services/api'
 import { useAuth } from '@/context/AuthContext'
-import { useBiometric } from '@/context/BiometricContext'
+import { useBiometric } from '@/hooks/useBiometric'
 
 export default function JoinClassScreen() {
   const { user } = useAuth()
-  const { generateBiometricToken } = useBiometric()
+  const { authenticateWithBiometric } = useBiometric()
   const [activeTab, setActiveTab] = useState<'session' | 'invite'>('session')
   const [sessionCode, setSessionCode] = useState('')
   const [inviteCode, setInviteCode] = useState('')
@@ -35,7 +35,7 @@ export default function JoinClassScreen() {
 
     try {
       // Generate biometric token for session joining
-      const biometricToken = await generateBiometricToken()
+      const biometricToken = await authenticateWithBiometric()
       
       if (!biometricToken) {
         Alert.alert('Authentication Required', 'Biometric authentication is required to join sessions.')
@@ -55,14 +55,14 @@ export default function JoinClassScreen() {
             text: 'View My Classes', 
             onPress: () => {
               router.back()
-              router.push('/(tabs)/my-classes')
+              router.push('/(tabs)/MyClasses')
             }
           },
           { 
             text: 'View Attendance', 
             onPress: () => {
               router.back()
-              router.push('/(tabs)/attendance')
+              router.push('/(tabs)/AttendanceScreen')
             }
           },
           { 
@@ -99,7 +99,7 @@ export default function JoinClassScreen() {
             text: 'View My Classes', 
             onPress: () => {
               router.back()
-              router.push('/(tabs)/my-classes')
+              router.push('/(tabs)/MyClasses')
             }
           },
           { 
@@ -310,7 +310,7 @@ export default function JoinClassScreen() {
                   <TouchableOpacity 
                     onPress={() => {
                       router.back()
-                      router.push('/(tabs)/browse-classes')
+                      router.push('/(tabs)/BrowseClasses')
                     }}
                   >
                     <Text style={styles.alternativeLink}>Browse Classes</Text>
