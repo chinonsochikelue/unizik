@@ -514,4 +514,219 @@ router.get("/class/:classId/stats", authenticateJWT, authorizeRole("TEACHER", "A
   }
 })
 
+// Get student attendance history (student endpoint with consistent structure)
+router.get("/student/history", authenticateJWT, authorizeRole("STUDENT"), async (req, res) => {
+  try {
+    const { page = 1, limit = 10, classId, startDate, endDate } = req.query
+    const skip = (page - 1) * limit
+    const studentId = req.user.id
+
+    // Build where clause
+    const where = { studentId }
+    
+    // Filter by class if specified
+    if (classId) {
+      where.session = { classId }
+    }
+    
+    // Filter by date range if specified
+    if (startDate || endDate) {
+      where.session = where.session || {}
+      where.session.startTime = {}
+      if (startDate) where.session.startTime.gte = new Date(startDate)
+      if (endDate) where.session.startTime.lte = new Date(endDate)
+    }
+
+    const attendance = await prisma.attendance.findMany({
+      where,
+      include: {
+        session: {
+          include: {
+            class: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+              },
+            },
+          },
+        },
+      },
+      skip: Number.parseInt(skip),
+      take: Number.parseInt(limit),
+      orderBy: { markedAt: "desc" },
+    })
+
+    const total = await prisma.attendance.count({ where })
+
+    res.json({
+      attendance,
+      pagination: {
+        page: Number.parseInt(page),
+        limit: Number.parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    })
+  } catch (error) {
+    console.error("Get student attendance history error:", error)
+    res.status(500).json({ error: "Failed to fetch attendance history" })
+  }
+})
+
+// Get student attendance summary (student endpoint)
+router.get("/student/summary", authenticateJWT, authorizeRole("STUDENT"), async (req, res) => {
+  try {
+    const studentId = req.user.id
+    const { classId } = req.query
+
+    // Build where clause
+    const where = { studentId }
+    if (classId) {
+      where.session = { classId }
+    }
+
+    // Get all attendance records for the student
+    const attendance = await prisma.attendance.findMany({
+      where,
+      select: {
+        status: true,
+        session: {
+          select: {
+            id: true,
+            class: {
+              select: {
+                id: true,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    // Get total sessions the student should have attended
+    const sessionWhere = {}
+    if (classId) {
+      sessionWhere.classId = classId
+      // Also need to verify student is enrolled in the class
+      const classData = await prisma.class.findFirst({
+        where: {
+          id: classId,
+          students: {
+            some: { id: studentId },
+          },
+        },
+      })
+      if (!classData) {
+        return res.status(403).json({ error: "Not enrolled in this class" })
+      }
+    } else {
+      // Get sessions for all classes the student is enrolled in
+      sessionWhere.class = {
+        students: {
+          some: { id: studentId },
+        },
+      }
+    }
+
+    const totalSessions = await prisma.session.count({
+      where: sessionWhere,
+    })
+
+    // Calculate summary statistics
+    const presentCount = attendance.filter((a) => a.status === "PRESENT").length
+    const absentCount = attendance.filter((a) => a.status === "ABSENT").length
+    const lateCount = attendance.filter((a) => a.status === "LATE").length
+    const excusedCount = attendance.filter((a) => a.status === "EXCUSED").length
+    const attendanceRate = totalSessions > 0 ? (presentCount + lateCount) / totalSessions : 0
+
+    res.json({
+      summary: {
+        totalSessions,
+        presentCount,
+        absentCount,
+        lateCount,
+        excusedCount,
+        attendanceRate,
+      },
+    })
+  } catch (error) {
+    console.error("Get student attendance summary error:", error)
+    res.status(500).json({ error: "Failed to fetch attendance summary" })
+  }
+})
+
+// Get student attendance for specific class (student endpoint)
+router.get("/student/class/:classId", authenticateJWT, authorizeRole("STUDENT"), async (req, res) => {
+  try {
+    const studentId = req.user.id
+    const { classId } = req.params
+
+    // Verify student is enrolled in the class
+    const classData = await prisma.class.findFirst({
+      where: {
+        id: classId,
+        students: {
+          some: { id: studentId },
+        },
+      },
+    })
+
+    if (!classData) {
+      return res.status(403).json({ error: "Not enrolled in this class" })
+    }
+
+    // Get attendance for this class
+    const attendance = await prisma.attendance.findMany({
+      where: {
+        studentId,
+        session: {
+          classId,
+        },
+      },
+      include: {
+        session: {
+          include: {
+            class: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { markedAt: "desc" },
+    })
+
+    // Get total sessions for this class
+    const totalSessions = await prisma.session.count({
+      where: { classId },
+    })
+
+    // Calculate summary for this class
+    const presentCount = attendance.filter((a) => a.status === "PRESENT").length
+    const absentCount = attendance.filter((a) => a.status === "ABSENT").length
+    const lateCount = attendance.filter((a) => a.status === "LATE").length
+    const excusedCount = attendance.filter((a) => a.status === "EXCUSED").length
+    const attendanceRate = totalSessions > 0 ? (presentCount + lateCount) / totalSessions : 0
+
+    res.json({
+      attendance,
+      summary: {
+        totalSessions,
+        presentCount,
+        absentCount,
+        lateCount,
+        excusedCount,
+        attendanceRate,
+      },
+    })
+  } catch (error) {
+    console.error("Get student class attendance error:", error)
+    res.status(500).json({ error: "Failed to fetch class attendance" })
+  }
+})
+
 module.exports = router

@@ -41,9 +41,19 @@ export default function StudentTabLayout() {
       <Tabs.Screen
         name="AttendanceScreen"
         options={{
-          title: 'Attendance',
+          title: 'Join Session',
           tabBarIcon: ({ color }) => (
             <MaterialCommunityIcons size={28} name="account-multiple-check-outline" color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="AttendanceHistory"
+        options={{
+          title: 'History',
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons size={28} name="history" color={color} />
           ),
         }}
       />

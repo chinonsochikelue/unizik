@@ -24,7 +24,8 @@ router.get("/", authenticateJWT, authorizeRole("ADMIN"), async (req, res) => {
         lastName: true,
         phone: true,
         department: true,
-        employeeId: true,
+        studentId: true,
+        teacherId: true,
         isActive: true,
         createdAt: true,
       },
@@ -63,7 +64,8 @@ router.get("/profile", authenticateJWT, async (req, res) => {
         lastName: true,
         phone: true,
         department: true,
-        employeeId: true,
+        studentId: true,
+        teacherId: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
@@ -101,7 +103,8 @@ router.get("/:id", authenticateJWT, async (req, res) => {
         lastName: true,
         phone: true,
         department: true,
-        employeeId: true,
+        studentId: true,
+        teacherId: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
@@ -122,7 +125,7 @@ router.get("/:id", authenticateJWT, async (req, res) => {
 // Create user (Admin only)
 router.post("/", authenticateJWT, authorizeRole("ADMIN"), async (req, res) => {
   try {
-    const { email, password, role, firstName, lastName, phone, department, employeeId } = req.body
+    const { email, password, role, firstName, lastName, phone, department, studentId, teacherId } = req.body
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -147,7 +150,8 @@ router.post("/", authenticateJWT, authorizeRole("ADMIN"), async (req, res) => {
         lastName,
         phone,
         department,
-        employeeId,
+        studentId,
+        teacherId,
         isActive: true,
       },
       select: {
@@ -158,7 +162,8 @@ router.post("/", authenticateJWT, authorizeRole("ADMIN"), async (req, res) => {
         lastName: true,
         phone: true,
         department: true,
-        employeeId: true,
+        studentId: true,
+        teacherId: true,
         createdAt: true,
       },
     })
@@ -198,7 +203,7 @@ router.put("/profile", authenticateJWT, async (req, res) => {
     console.log('Authenticated user:', req.user);
     console.log('Request body:', req.body);
     
-    const { firstName, lastName, email, phone, department, employeeId } = req.body
+    const { firstName, lastName, email, phone, department, studentId, teacherId } = req.body
     const userId = req.user.id
 
     // Prepare update data
@@ -209,7 +214,8 @@ router.put("/profile", authenticateJWT, async (req, res) => {
     if (email !== undefined) updateData.email = email
     if (phone !== undefined) updateData.phone = phone
     if (department !== undefined) updateData.department = department
-    if (employeeId !== undefined) updateData.employeeId = employeeId
+    if (studentId !== undefined) updateData.studentId = studentId
+    if (teacherId !== undefined) updateData.teacherId = teacherId
 
     // Check if email is already taken by another user
     if (email) {
@@ -237,7 +243,8 @@ router.put("/profile", authenticateJWT, async (req, res) => {
         lastName: true,
         phone: true,
         department: true,
-        employeeId: true,
+        studentId: true,
+        teacherId: true,
         isActive: true,
         createdAt: true,
         updatedAt: true
@@ -258,7 +265,7 @@ router.put("/profile", authenticateJWT, async (req, res) => {
 router.put("/:id", authenticateJWT, async (req, res) => {
   try {
     const { id } = req.params
-    const { firstName, lastName, email, phone, department, employeeId, role, isActive, password } = req.body
+    const { firstName, lastName, email, phone, department, studentId, teacherId, role, isActive, password } = req.body
     
     // Users can only update their own profile, unless they're admin
     if (req.user.role !== "ADMIN" && req.user.id !== id) {
@@ -273,7 +280,8 @@ router.put("/:id", authenticateJWT, async (req, res) => {
     if (email !== undefined) updateData.email = email
     if (phone !== undefined) updateData.phone = phone
     if (department !== undefined) updateData.department = department
-    if (employeeId !== undefined) updateData.employeeId = employeeId
+    if (studentId !== undefined) updateData.studentId = studentId
+    if (teacherId !== undefined) updateData.teacherId = teacherId
     
     // Only admins can change role and isActive
     if (req.user.role === "ADMIN") {
@@ -312,7 +320,8 @@ router.put("/:id", authenticateJWT, async (req, res) => {
         lastName: true,
         phone: true,
         department: true,
-        employeeId: true,
+        studentId: true,
+        teacherId: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,

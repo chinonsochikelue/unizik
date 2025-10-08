@@ -175,6 +175,26 @@ class ApiService {
   async assignTeacherToClass(classId, teacherId) {
     return this.put(`/classes/${classId}`, { teacherId })
   }
+
+  // Student Attendance History APIs
+  async getStudentAttendanceHistory({ classId, startDate, endDate, page = 1, limit = 10 } = {}) {
+    const params = new URLSearchParams()
+    if (classId) params.append('classId', classId)
+    if (startDate) params.append('startDate', startDate)
+    if (endDate) params.append('endDate', endDate)
+    params.append('page', page.toString())
+    params.append('limit', limit.toString())
+    
+    return this.get(`/attendance/student/history?${params.toString()}`)
+  }
+
+  async getStudentAttendanceSummary() {
+    return this.get('/attendance/student/summary')
+  }
+
+  async getStudentClassAttendance(classId) {
+    return this.get(`/attendance/student/class/${classId}`)
+  }
 }
 
 export const apiService = new ApiService()
