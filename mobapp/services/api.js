@@ -7,8 +7,8 @@ class ApiService {
   constructor() {
     this.client = axios.create({
       // baseURL: "http://localhost:3001/api", // Updated to match backend server
-      baseURL: "http://10.25.29.152:3000/api",
-      // baseURL: API_BASE_URL,
+      // baseURL: "http://10.25.29.152:3000/api",
+      baseURL: API_BASE_URL,
       timeout: 10000,
       headers: {
         "Content-Type": "application/json",
