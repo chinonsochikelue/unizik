@@ -6,7 +6,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18-green.svg)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A comprehensive, modern React Native mobile application for managing student attendance at the University of Nigeria, Nsukka (UNN). Built with Expo SDK and featuring advanced biometric authentication, real-time attendance tracking, and multi-role support for students, teachers, and administrators.
+A comprehensive, modern React Native mobile application for managing student attendance at the Nnamdi Azikiwe University, Awka (UNIZIK || NAU). Built with Expo SDK and featuring advanced biometric authentication, real-time attendance tracking, and multi-role support for students, teachers, and administrators.
 
 ## 🌟 Features
 
