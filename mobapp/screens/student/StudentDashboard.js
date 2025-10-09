@@ -91,7 +91,7 @@ export default function StudentDashboard() {
       <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
         {/* Welcome Header */}
         <View style={styles.welcomeHeader}>
-          <Text style={styles.welcomeText}>Welcome back, {user?.name}!</Text>
+          <Text style={styles.welcomeText}>Welcome back, {user?.lastName}{" "}{user?.firstName}!</Text>
           <TouchableOpacity 
             style={styles.markAttendanceButton}
             onPress={navigateToSessionJoin}

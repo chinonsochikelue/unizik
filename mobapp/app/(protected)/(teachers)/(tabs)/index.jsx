@@ -179,7 +179,7 @@ export default function TeacherDashboard() {
     >
       <View style={styles.header}>
         <Text style={styles.greeting}>Welcome back,</Text>
-        <Text style={styles.name}>{user?.name}</Text>
+        <Text style={styles.name}>{user?.firstName}</Text>
       </View>
 
       <View style={styles.statsContainer}>
@@ -216,24 +216,30 @@ export default function TeacherDashboard() {
           <Ionicons name="chevron-forward" size={20} color="#64748b" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionCard}>
+        <TouchableOpacity 
+          style={styles.actionCard} 
+          onPress={() => navigation.push("/(protected)/(teachers)/(tabs)/ClassSelector?targetScreen=roster")}
+        >
           <View style={styles.actionIcon}>
             <Ionicons name="people" size={24} color="#16a34a" />
           </View>
           <View style={styles.actionContent}>
-            <Text style={styles.actionTitle}>Manage Students</Text>
-            <Text style={styles.actionSubtitle}>View and manage class enrollment</Text>
+            <Text style={styles.actionTitle}>Class Roster</Text>
+            <Text style={styles.actionSubtitle}>Manage student enrollment and status</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#64748b" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionCard}>
+        <TouchableOpacity 
+          style={styles.actionCard}
+          onPress={() => navigation.push("/(protected)/(teachers)/(tabs)/ClassSelector?targetScreen=report")}
+        >
           <View style={styles.actionIcon}>
             <Ionicons name="analytics" size={24} color="#f59e0b" />
           </View>
           <View style={styles.actionContent}>
-            <Text style={styles.actionTitle}>View Reports</Text>
-            <Text style={styles.actionSubtitle}>Check attendance statistics</Text>
+            <Text style={styles.actionTitle}>Attendance Reports</Text>
+            <Text style={styles.actionSubtitle}>Generate and export attendance analytics</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#64748b" />
         </TouchableOpacity>

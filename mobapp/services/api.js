@@ -7,7 +7,7 @@ class ApiService {
   constructor() {
     this.client = axios.create({
       // baseURL: "http://localhost:3001/api", // Updated to match backend server
-      // baseURL: "http://10.25.29.152:3000/api",
+      // baseURL: "http://10.25.29.152:3001/api",
       baseURL: API_BASE_URL,
       timeout: 10000,
       headers: {
@@ -194,6 +194,70 @@ class ApiService {
 
   async getStudentClassAttendance(classId) {
     return this.get(`/attendance/student/class/${classId}`)
+  }
+
+  // Teacher Roster & Attendance Report APIs
+  async getClassRoster(classId) {
+    return this.get(`/classes/${classId}/roster`)
+  }
+
+  async getClassAttendanceReport(classId, params = {}) {
+    const queryParams = new URLSearchParams()
+    if (params.startDate) queryParams.append('startDate', params.startDate)
+    if (params.endDate) queryParams.append('endDate', params.endDate)
+    if (params.format) queryParams.append('format', params.format) // 'json', 'csv', 'pdf'
+    
+    return this.get(`/classes/${classId}/attendance-report?${queryParams.toString()}`)
+  }
+
+  async getClassSessions(classId, params = {}) {
+    const queryParams = new URLSearchParams()
+    if (params.startDate) queryParams.append('startDate', params.startDate)
+    if (params.endDate) queryParams.append('endDate', params.endDate)
+    if (params.page) queryParams.append('page', params.page.toString())
+    if (params.limit) queryParams.append('limit', params.limit.toString())
+    
+    return this.get(`/classes/${classId}/sessions?${queryParams.toString()}`)
+  }
+
+  async exportAttendanceReport(classId, format = 'csv', params = {}) {
+    const queryParams = new URLSearchParams()
+    queryParams.append('format', format)
+    if (params.startDate) queryParams.append('startDate', params.startDate)
+    if (params.endDate) queryParams.append('endDate', params.endDate)
+    
+    return this.get(`/classes/${classId}/attendance-report/export?${queryParams.toString()}`, {
+      responseType: format === 'pdf' ? 'blob' : 'blob'
+    })
+  }
+
+  async getStudentAttendanceDetails(classId, studentId, params = {}) {
+    const queryParams = new URLSearchParams()
+    if (params.startDate) queryParams.append('startDate', params.startDate)
+    if (params.endDate) queryParams.append('endDate', params.endDate)
+    
+    return this.get(`/classes/${classId}/students/${studentId}/attendance?${queryParams.toString()}`)
+  }
+
+  async updateStudentRosterStatus(classId, studentId, status) {
+    return this.put(`/classes/${classId}/students/${studentId}`, { status })
+  }
+
+  async bulkUpdateRoster(classId, updates) {
+    return this.put(`/classes/${classId}/roster/bulk-update`, { updates })
+  }
+
+  // Teacher session management
+  async createAttendanceSession(classId, sessionData) {
+    return this.post(`/classes/${classId}/sessions`, sessionData)
+  }
+
+  async endAttendanceSession(sessionId) {
+    return this.put(`/sessions/${sessionId}/end`)
+  }
+
+  async getSessionAttendance(sessionId) {
+    return this.get(`/sessions/${sessionId}/attendance`)
   }
 }
 

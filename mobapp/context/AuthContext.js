@@ -1,6 +1,9 @@
 import { createContext, useContext, useEffect, useState } from "react"
+import { Platform } from "react-native"
+import { router } from "expo-router"
 import Storage from "../utils/storage"
 import { apiService } from "../services/api"
+import { performWebLogout } from "../utils/webLogout"
 
 const AuthContext = createContext({})
 
@@ -41,7 +44,7 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  const login = async (email, password) => {
+  const login = async (email, password, showToast = null) => {
     try {
       const response = await apiService.post("/auth/login", {
         email,
@@ -61,12 +64,28 @@ export const AuthProvider = ({ children }) => {
       setUser(user)
       apiService.setAuthToken(accessToken)
 
+      // Show success toast if available
+      if (showToast) {
+        showToast.showSuccess(`Welcome back, ${user.firstName}!`, {
+          title: 'Login Successful'
+        })
+      }
+
       return { success: true }
     } catch (error) {
       console.error("Login error:", error)
+      const errorMessage = error.response?.data?.error || "Login failed"
+      
+      // Show error toast if available
+      if (showToast) {
+        showToast.showError(errorMessage, {
+          title: 'Login Failed'
+        })
+      }
+      
       return {
         success: false,
-        error: error.response?.data?.error || "Login failed",
+        error: errorMessage,
       }
     }
   }
@@ -84,7 +103,7 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  const logout = async () => {
+  const logout = async (showToast = null) => {
     try {
       const refreshToken = await Storage.getItem("refreshToken")
 
@@ -99,6 +118,54 @@ export const AuthProvider = ({ children }) => {
       setAccessToken(null)
       setUser(null)
       apiService.setAuthToken(null)
+      
+      // Handle platform-specific logout
+      if (Platform.OS === 'web') {
+        console.log('Performing web logout...')
+        
+        try {
+          // Use specialized web logout utility
+          await performWebLogout(showToast)
+        } catch (webError) {
+          console.error('Web logout utility failed:', webError)
+          
+          // Simple fallback for web
+          if (showToast) {
+            showToast.showSuccess('You have been logged out successfully', {
+              title: 'Logged Out'
+            })
+          }
+          
+          // Force a simple page reload after a delay
+          setTimeout(() => {
+            if (typeof window !== 'undefined') {
+              console.log('Fallback: reloading page for logout')
+              window.location.href = '/'
+            }
+          }, showToast ? 2000 : 500)
+        }
+      } else {
+        // Mobile logout
+        console.log('Performing mobile logout...')
+        
+        if (showToast) {
+          showToast.showSuccess('You have been logged out successfully', {
+            title: 'Logged Out'
+          })
+        }
+        
+        try {
+          router.replace('/(auth)/login')
+        } catch (routerError) {
+          console.error('Mobile logout navigation error:', routerError)
+          // Mobile fallback - try different routes
+          try {
+            router.push('/(auth)/login')
+          } catch (fallbackError) {
+            console.error('Mobile fallback navigation also failed:', fallbackError)
+          }
+        }
+      }
     }
   }
 

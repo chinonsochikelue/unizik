@@ -7,17 +7,20 @@ import {
   Alert, 
   ScrollView,
   Animated,
-  Pressable
+  Pressable,
+  Platform
 } from "react-native"
 import { LinearGradient } from "expo-linear-gradient"
 import { BlurView } from "expo-blur"
 import { Ionicons } from "@expo/vector-icons"
 import { useAuth } from "@/context/AuthContext"
+import { useToast } from "@/context/ToastContext"
 import { router } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth()
+  const toast = useToast()
   const insets = useSafeAreaInsets()
   const [showActions, setShowActions] = useState(false)
   
@@ -48,21 +51,28 @@ export default function ProfileScreen() {
   }, [])
 
   const handleLogout = () => {
-    Alert.alert(
-      "Logout", 
-      "Are you sure you want to logout?", 
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Logout", 
-          style: "destructive", 
-          onPress: () => {
-            logout()
-            router.replace("/(auth)/login")
-          }
-        },
-      ]
-    )
+    if (Platform.OS === 'web') {
+      // For web, show a simple confirmation
+      if (confirm('Are you sure you want to logout?')) {
+        logout(toast)
+      }
+    } else {
+      // For mobile, use native Alert
+      Alert.alert(
+        "Logout", 
+        "Are you sure you want to logout?", 
+        [
+          { text: "Cancel", style: "cancel" },
+          { 
+            text: "Logout", 
+            style: "destructive", 
+            onPress: async () => {
+              await logout(toast)
+            }
+          },
+        ]
+      )
+    }
   }
 
   const getRoleBadgeColor = (role: string) => {

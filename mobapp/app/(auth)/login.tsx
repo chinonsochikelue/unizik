@@ -1,4 +1,5 @@
 import { useAuth } from "@/context/AuthContext"
+import { useToast } from "@/context/ToastContext"
 import { router } from "expo-router"
 import { useState, useRef, useEffect } from "react"
 import {
@@ -30,6 +31,7 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false)
   const [focusedInput, setFocusedInput] = useState<string | null>(null)
   const { login } = useAuth()
+  const toast = useToast()
   const insets = useSafeAreaInsets()
 
   // Animations
@@ -78,16 +80,19 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert("Error", "Please fill in all fields")
+      toast.showError("Please fill in all fields", {
+        title: "Missing Information"
+      })
       return
     }
 
     setLoading(true)
-    const result = await login(email, password)
+    const result = await login(email, password, toast)
     setLoading(false)
 
-    if (!result.success) {
-      Alert.alert("Login Failed", result.error)
+    if (result.success) {
+      // Navigation will be handled by the auth context
+      // The success toast is already shown in the login function
     }
   }
 

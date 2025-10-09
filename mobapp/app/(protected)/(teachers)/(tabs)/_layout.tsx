@@ -56,6 +56,26 @@ export default function TeacherTabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="ClassRoster"
+        options={{
+          title: "Class Roster",
+          tabBarIcon: ({ color }) => <Ionicons name="people-outline" size={28} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="AttendanceReport"
+        options={{
+          title: "Reports",
+          tabBarIcon: ({ color }) => <Ionicons name="analytics-outline" size={28} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="ClassSelector"
+        options={{
+          href: null, // Hide from tab bar
+        }}
+      />
+      <Tabs.Screen
         name="ProfileScreen"
         options={{
           title: "Profile",
