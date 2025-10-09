@@ -175,6 +175,11 @@ export default function FingerprintEnrollScreen() {
 
   return (
     <View style={styles.container}>
+
+      <ScrollView 
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
       {/* Enhanced Header */}
       <LinearGradient
         colors={["#667eea", "#764ba2", "#f093fb"]}
@@ -225,10 +230,6 @@ export default function FingerprintEnrollScreen() {
         </View>
       </LinearGradient>
 
-      <ScrollView 
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-      >
         {/* Device Support Status */}
         <Animated.View style={[styles.section, { opacity: fadeAnim }]}>
           <View style={styles.sectionHeader}>
