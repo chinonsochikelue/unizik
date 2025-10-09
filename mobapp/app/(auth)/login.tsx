@@ -91,48 +91,48 @@ export default function LoginScreen() {
     }
   }
 
-  const fillDemoCredentials = (role: string) => {
-    switch (role) {
-      case "admin":
-        setEmail("admin@example.com")
-        setPassword("Admin123!")
-        break
-      case "teacher":
-        setEmail("teacher@example.com")
-        setPassword("Teacher123!")
-        break
-      case "student":
-        setEmail("student1@example.com")
-        setPassword("Student123!")
-        break
-    }
-  }
+  // const fillDemoCredentials = (role: string) => {
+  //   switch (role) {
+  //     case "admin":
+  //       setEmail("admin@example.com")
+  //       setPassword("Admin123!")
+  //       break
+  //     case "teacher":
+  //       setEmail("teacher@example.com")
+  //       setPassword("Teacher123!")
+  //       break
+  //     case "student":
+  //       setEmail("student1@example.com")
+  //       setPassword("Student123!")
+  //       break
+  //   }
+  // }
 
-  const getDemoRoleColor = (role: string) => {
-    switch (role) {
-      case "admin":
-        return ["#dc2626", "#b91c1c"]
-      case "teacher":
-        return ["#2563eb", "#1d4ed8"]
-      case "student":
-        return ["#10b981", "#059669"]
-      default:
-        return ["#64748b", "#475569"]
-    }
-  }
+  // const getDemoRoleColor = (role: string) => {
+  //   switch (role) {
+  //     case "admin":
+  //       return ["#dc2626", "#b91c1c"]
+  //     case "teacher":
+  //       return ["#2563eb", "#1d4ed8"]
+  //     case "student":
+  //       return ["#10b981", "#059669"]
+  //     default:
+  //       return ["#64748b", "#475569"]
+  //   }
+  // }
 
-  const getDemoRoleIcon = (role: string) => {
-    switch (role) {
-      case "admin":
-        return "shield-checkmark"
-      case "teacher":
-        return "school"
-      case "student":
-        return "book"
-      default:
-        return "person"
-    }
-  }
+  // const getDemoRoleIcon = (role: string) => {
+  //   switch (role) {
+  //     case "admin":
+  //       return "shield-checkmark"
+  //     case "teacher":
+  //       return "school"
+  //     case "student":
+  //       return "book"
+  //     default:
+  //       return "person"
+  //   }
+  // }
 
   return (
     <View style={styles.container}>
@@ -171,7 +171,7 @@ export default function LoginScreen() {
                 colors={["rgba(255,255,255,0.3)", "rgba(255,255,255,0.1)"]}
                 style={styles.logoCircle}
               >
-                <Image source={require('../../assets/images/icon.png')} style={{width: 100, height: 60}} />
+                <Image source={require('../../assets/images/logo.png')} style={{width: 100, height: 60}} />
                 {/* <Ionicons name="finger-print" size={60} color="#fff" /> */}
               </LinearGradient>
             </View>
@@ -291,7 +291,7 @@ export default function LoginScreen() {
                 </TouchableOpacity>
 
                 {/* Demo Accounts */}
-                <View style={styles.demoContainer}>
+                {/* <View style={styles.demoContainer}>
                   <View style={styles.demoHeader}>
                     <View style={styles.divider} />
                     <Text style={styles.demoTitle}>Quick Demo Login</Text>
@@ -329,11 +329,11 @@ export default function LoginScreen() {
                       </Pressable>
                     ))}
                   </View>
-                </View>
+                </View> */}
 
                 {/* Sign Up Link */}
                 <View style={styles.signupContainer}>
-                  <Text style={styles.signupText}>Don't have an account? </Text>
+                  <Text style={styles.signupText}>Don&apos;t have an account? </Text>
                   <TouchableOpacity onPress={() => router.push('/signup')}>
                     <Text style={styles.signupLink}>Sign Up</Text>
                   </TouchableOpacity>

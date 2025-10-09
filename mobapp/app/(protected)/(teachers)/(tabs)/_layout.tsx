@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext"
 import { Colors } from "@/constants/theme"
 import { HapticTab } from "@/components/haptic-tab"
 import { useColorScheme } from "@/hooks/use-color-scheme"
-import { Ionicons } from "@expo/vector-icons"
+import { Ionicons, MaterialIcons } from "@expo/vector-icons"
 
 export default function TeacherTabsLayout() {
   const colorScheme = useColorScheme()
@@ -37,7 +37,7 @@ export default function TeacherTabsLayout() {
       <Tabs.Screen
         name="ClassListScreen"
         options={{
-          title: "My Classes",
+          title: "Classes List",
           tabBarIcon: ({ color }) => <Ionicons name="list" size={28} color={color} />,
         }}
       />
@@ -46,6 +46,13 @@ export default function TeacherTabsLayout() {
         options={{
           title: "Session",
           tabBarIcon: ({ color }) => <Ionicons name="time" size={28} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="TeacherClasses"
+        options={{
+          title: "My Classes",
+          tabBarIcon: ({ color }) => <MaterialIcons name="playlist-add-check-circle" size={28} color={color} />,
         }}
       />
       <Tabs.Screen

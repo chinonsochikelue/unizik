@@ -108,6 +108,11 @@ export default function ProfileScreen() {
   return (
     <View style={styles.container}>
       {/* Enhanced Header with Gradient */}
+
+      <ScrollView 
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
       <LinearGradient
         colors={getAvatarGradient(user?.role)}
         style={[styles.header, { paddingTop: insets.top + 20 }]}
@@ -163,11 +168,6 @@ export default function ProfileScreen() {
           <View style={[styles.wave, styles.wave2]} />
         </View>
       </LinearGradient>
-
-      <ScrollView 
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-      >
         {/* Stats Cards */}
         <Animated.View 
           style={[

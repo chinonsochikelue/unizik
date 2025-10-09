@@ -69,16 +69,6 @@ export default function StudentTabLayout() {
       />
 
       <Tabs.Screen
-        name="ProfileScreen"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color }) => (
-            <Ionicons size={28} name="person" color={color} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
         name="MyClasses"
         options={{
           title: 'My Classes',
@@ -102,6 +92,16 @@ export default function StudentTabLayout() {
         name="ClassEnrollment"
         options={{
           href: null, // Hide from tabs but keep for compatibility
+        }}
+      />
+
+      <Tabs.Screen
+        name="ProfileScreen"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) => (
+            <Ionicons size={28} name="person" color={color} />
+          ),
         }}
       />
     </Tabs>

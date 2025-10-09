@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react"
-import AsyncStorage from "@react-native-async-storage/async-storage"
+import Storage from "../utils/storage"
 import { apiService } from "../services/api"
 
 const AuthContext = createContext({})
@@ -23,8 +23,8 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuthState = async () => {
     try {
-      const token = await AsyncStorage.getItem("accessToken")
-      const userData = await AsyncStorage.getItem("userData")
+      const token = await Storage.getItem("accessToken")
+      const userData = await Storage.getItem("userData")
 
       if (token && userData) {
         const parsedUser = JSON.parse(userData)
@@ -32,7 +32,7 @@ export const AuthProvider = ({ children }) => {
         setUser(parsedUser)
         apiService.setAuthToken(token)
         // Also store with 'token' key for backward compatibility
-        await AsyncStorage.setItem("token", token)
+        await Storage.setItem("token", token)
       }
     } catch (error) {
       console.error("Error checking auth state:", error)
@@ -51,10 +51,10 @@ export const AuthProvider = ({ children }) => {
       const { accessToken, refreshToken, user } = response.data
 
       // Store tokens and user data
-      await AsyncStorage.setItem("accessToken", accessToken)
-      await AsyncStorage.setItem("token", accessToken) // For backward compatibility
-      await AsyncStorage.setItem("refreshToken", refreshToken)
-      await AsyncStorage.setItem("userData", JSON.stringify(user))
+      await Storage.setItem("accessToken", accessToken)
+      await Storage.setItem("token", accessToken) // For backward compatibility
+      await Storage.setItem("refreshToken", refreshToken)
+      await Storage.setItem("userData", JSON.stringify(user))
 
       // Update state
       setAccessToken(accessToken)
@@ -86,7 +86,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      const refreshToken = await AsyncStorage.getItem("refreshToken")
+      const refreshToken = await Storage.getItem("refreshToken")
 
       if (refreshToken) {
         await apiService.post("/auth/logout", { refreshToken })
@@ -95,7 +95,7 @@ export const AuthProvider = ({ children }) => {
       console.error("Logout error:", error)
     } finally {
       // Clear local storage regardless of API call success
-      await AsyncStorage.multiRemove(["accessToken", "token", "refreshToken", "userData"])
+      await Storage.multiRemove(["accessToken", "token", "refreshToken", "userData"])
       setAccessToken(null)
       setUser(null)
       apiService.setAuthToken(null)
@@ -104,7 +104,7 @@ export const AuthProvider = ({ children }) => {
 
   const refreshToken = async () => {
     try {
-      const storedRefreshToken = await AsyncStorage.getItem("refreshToken")
+      const storedRefreshToken = await Storage.getItem("refreshToken")
 
       if (!storedRefreshToken) {
         throw new Error("No refresh token available")
@@ -116,8 +116,8 @@ export const AuthProvider = ({ children }) => {
 
       const { accessToken } = response.data
 
-      await AsyncStorage.setItem("accessToken", accessToken)
-      await AsyncStorage.setItem("token", accessToken) // For backward compatibility
+      await Storage.setItem("accessToken", accessToken)
+      await Storage.setItem("token", accessToken) // For backward compatibility
       setAccessToken(accessToken)
       apiService.setAuthToken(accessToken)
 
@@ -135,7 +135,7 @@ export const AuthProvider = ({ children }) => {
       setUser(updatedUserData)
       
       // Update stored user data
-      await AsyncStorage.setItem("userData", JSON.stringify(updatedUserData))
+      await Storage.setItem("userData", JSON.stringify(updatedUserData))
       
       return { success: true }
     } catch (error) {

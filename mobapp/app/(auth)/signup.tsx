@@ -232,7 +232,7 @@ export default function SignupScreen() {
                 style={styles.logoCircle}
               >
                 <Image
-                  source={require("../../assets/images/icon.png")}
+                  source={require("../../assets/images/logo.png")}
                   style={styles.logoImage}
                 />
                 {/* <Ionicons name="person-add" size={60} color="#fff" /> */}

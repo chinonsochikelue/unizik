@@ -1,5 +1,5 @@
 import axios from "axios"
-import AsyncStorage from "@react-native-async-storage/async-storage"
+import Storage from "../utils/storage"
 
 const API_BASE_URL = "https://unizik.onrender.com/api" || "http://localhost:3000/api"
 
@@ -44,7 +44,7 @@ class ApiService {
           originalRequest._retry = true
 
           try {
-            const refreshToken = await AsyncStorage.getItem("refreshToken")
+            const refreshToken = await Storage.getItem("refreshToken")
 
             if (refreshToken) {
               const response = await this.client.post("/auth/refresh", {
@@ -52,7 +52,7 @@ class ApiService {
               })
 
               const { accessToken } = response.data
-              await AsyncStorage.setItem("accessToken", accessToken)
+              await Storage.setItem("accessToken", accessToken)
 
               // Update authorization header
               this.setAuthToken(accessToken)
@@ -63,7 +63,7 @@ class ApiService {
           } catch (refreshError) {
             console.error("Token refresh failed:", refreshError)
             // Clear tokens and redirect to login
-            await AsyncStorage.multiRemove(["accessToken", "refreshToken", "userData"])
+            await Storage.multiRemove(["accessToken", "refreshToken", "userData"])
           }
         }
 

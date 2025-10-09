@@ -1,7 +1,7 @@
 import React from 'react'
 import { Tabs, Redirect } from 'expo-router'
 import { useAuth } from '@/context/AuthContext'
-import { Ionicons } from '@expo/vector-icons'
+import { FontAwesome5, Ionicons } from '@expo/vector-icons'
 
 export default function AdminTabsLayout() {
   const { user } = useAuth()
@@ -64,6 +64,16 @@ export default function AdminTabsLayout() {
           title: 'Reports',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="analytics" color={color} size={size} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="TeacherManagement"
+        options={{
+          title: 'Teachers',
+          tabBarIcon: ({ color, size }) => (
+            <FontAwesome5 name="chalkboard-teacher" color={color} size={size} />
           ),
         }}
       />
