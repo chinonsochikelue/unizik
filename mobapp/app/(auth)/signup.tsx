@@ -344,7 +344,7 @@ export default function SignupScreen() {
                 <View style={styles.inputContainer}>
                   <Text style={styles.label}>Select Your Role</Text>
                   <View style={styles.roleGrid}>
-                    {['STUDENT', 'TEACHER', 'ADMIN'].map((role) => (
+                    {['STUDENT', 'TEACHER'].map((role) => (
                       <Pressable
                         key={role}
                         style={[
